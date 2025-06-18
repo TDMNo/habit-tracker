@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Трекер Привычек</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>💡 Трекер Привычек</h1>
+    <p class="subtitle">Следи за своими победами каждую неделю</p>
+    <div class="participant">
+      <label for="participant">Выберите участника:</label>
+      <select id="participant">
+        <option>Лёня</option>
+        <option>Гриша</option>
+      </select>
+      <input type="text" id="newName" placeholder="Новое имя" />
+      <button>➕</button>
+    </div>
+
+    <table id="habitTable">
+      <thead>
+        <tr>
+          <th>Привычка</th>
+          <th>ПН</th>
+          <th>ВТ</th>
+          <th>СР</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Зарядка</td>
+          <td><span class="dot done"></span></td>
+          <td><span class="dot"></span></td>
+          <td><span class="dot missed"></span></td>
+        </tr>
+        <tr>
+          <td>Чтение</td>
+          <td><span class="dot missed"></span></td>
+          <td><span class="dot done"></span></td>
+          <td><span class="dot done"></span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="add-habit">
+      <input type="text" placeholder="Новая привычка" />
+      <button>➕</button>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+
+body {
+  background-color: #0c1a2b;
+  color: #c7faff;
+  font-family: 'Courier New', monospace;
+  margin: 0;
+  padding: 0;
+}
+.container {
+  max-width: 900px;
+  margin: 30px auto;
+  padding: 20px;
+  border: 1px solid #29f0cb66;
+  border-radius: 20px;
+  background-color: #0f2238;
+}
+h1 {
+  text-align: center;
+  color: #29f0cb;
+}
+.subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #29f0cb88;
+}
+select, input[type="text"] {
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  background-color: #1e354c;
+  color: #c7faff;
+  margin-right: 10px;
+}
+button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background-color: #29f0cb;
+  color: #0c1a2b;
+  cursor: pointer;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+th, td {
+  text-align: center;
+  padding: 10px;
+  border-bottom: 1px solid #29f0cb33;
+}
+.dot {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background-color: #1e354c;
+  border: 1px solid #29f0cb88;
+}
+.dot.done {
+  background-color: #00ff88;
+}
+.dot.missed {
+  background-color: #ff3e3e;
+}
