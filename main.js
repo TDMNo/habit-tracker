@@ -1,5 +1,5 @@
 // 📍 URL твоего backend
-const API_URL = 'https://script.google.com/macros/s/AKfycbzyP0P3udQn2VwqizpaZSOGDWW0uxxv2GjNXnO87ZpOpR5EEJ5thEZh4Oqw3DNxt7xk/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxjrw5cyoEMLHwI2Vuunbqtew87sCCmpOwrBAcJXKViTuE761TOY5r5mZluxKop5sKy/exec';
 
 // 🔄 Получить привычки для участника
 async function getHabits(sheet) {
