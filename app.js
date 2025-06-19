@@ -140,7 +140,11 @@ function render() {
 // ============================
 function setUser(name) {
   userName = name;
-  userData = loadUserData(name);
+ const key = 'habit_' + name;
+if (!localStorage.getItem(key)) {
+  localStorage.setItem(key, JSON.stringify({ name, habits: [], data: {} }));
+}
+userData = loadUserData(name);
   title.textContent = `Привычки: ${name}`;
   saveUserData();
   render();
