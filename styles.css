@@ -1,4 +1,6 @@
-/* styles.css */
+/* styles.css — глобальные стили */
+
+/* 🌒 Основной фон и шрифт */
 body {
   margin: 0;
   font-family: monospace;
@@ -6,25 +8,25 @@ body {
   color: #00ff9c;
 }
 
+/* 📦 Центрированный контейнер */
 .container {
-  padding: 20px;
   max-width: 900px;
   margin: auto;
+  padding: 20px;
 }
 
+/* 🧾 Инпуты и кнопки */
 input, button, select {
   padding: 8px;
-  margin-top: 8px;
-  margin-bottom: 16px;
   font-size: 1rem;
-  border-radius: 5px;
   border: none;
-  outline: none;
+  border-radius: 5px;
+  margin-top: 10px;
 }
 
 button {
   background-color: #00ff9c;
-  color: #000;
+  color: black;
   cursor: pointer;
 }
 
@@ -32,48 +34,38 @@ button:hover {
   background-color: #00cc7a;
 }
 
-.add-habit {
-  display: flex;
-  gap: 10px;
-}
-
-h1 {
-  margin-bottom: 20px;
-}
-
-select {
-  width: 100%;
-  max-width: 300px;
-}
-
-input[type="text"] {
-  flex: 1;
-}
-
-/* Таблица */
+/* 📋 Таблица */
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 20px;
+  margin-top: 20px;
 }
 
 th, td {
-  padding: 10px;
+  border: 1px solid #00ff9c30;
   text-align: center;
-  border: 1px solid #00ff9c20;
+  padding: 8px;
 }
 
-th {
-  background-color: #111;
+/* 🔲 Удаление (узкая колонка) */
+.delete-col {
+  width: 30px;
 }
 
-/* Кружки */
+/* 🏷 Название привычки */
+.name-col {
+  text-align: left;
+  padding-left: 10px;
+}
+
+/* 🟢🟥⚪ Круги состояния */
 .circle {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
   margin: auto;
-  transition: transform 0.1s;
+  border-radius: 50%;
+  background-color: #444;
+  cursor: pointer;
 }
 
 .circle[data-status="done"] {
@@ -84,19 +76,16 @@ th {
   background-color: red;
 }
 
-.circle[data-status=""] {
-  background-color: #444;
-  border: 1px solid #666;
+/* 📊 Прогресс бар */
+.progress-col {
+  width: 120px;
 }
 
-/* Прогресс бар */
-td.progress-bar {
+.progress-bar {
   height: 10px;
-  background-color: #222;
-  border: 1px solid #00ff9c;
-  position: relative;
-  padding: 0;
-  white-space: nowrap;
+  background-color: #333;
+  border-radius: 5px;
+  overflow: hidden;
 }
 
 .progress-fill {
@@ -104,9 +93,14 @@ td.progress-bar {
   background-color: #00ff9c;
 }
 
-/* Подсветка текущей даты */
-th.current-day {
-  background-color: #1e1e1e;
-  color: #ffffff;
-  border-bottom: 2px solid #00ff9c;
+/* 📅 Подсветка текущего дня */
+.current-day {
+  border-bottom: 2px solid #00ffee;
+}
+
+/* ➕ Блок добавления */
+.add-habit {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
 }
