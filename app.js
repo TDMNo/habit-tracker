@@ -6,6 +6,7 @@ const table = document.getElementById('habit-table').querySelector('tbody');
 const dayHeaders = [document.getElementById('day1'), document.getElementById('day2'), document.getElementById('day3')];
 const addBtn = document.getElementById('add-btn');
 const newHabitInput = document.getElementById('new-habit');
+const rangeInput = document.getElementById('day-range');
 
 if (!userName) location.href = 'index.html';
 title.textContent = `Привычки:  ${userName}`;
@@ -13,7 +14,12 @@ title.textContent = `Привычки:  ${userName}`;
 const storageKey = 'habit_' + userName;
 let userData = JSON.parse(localStorage.getItem(storageKey)) || { name: userName, habits: [], data: {} };
 
-// Получаем массив дат (вчера, сегодня, завтра)
+let offset = 0;
+rangeInput.addEventListener('input', () => {
+  offset = parseInt(rangeInput.value);
+  render();
+});
+
 function getNDates(centerOffset = 0, range = 1) {
   const base = new Date();
   base.setDate(base.getDate() + centerOffset);
@@ -27,16 +33,16 @@ function getNDates(centerOffset = 0, range = 1) {
   });
 }
 
-const visibleDays = getNDates(0, 1); // вчера, сегодня, завтра
-const progressDays = getNDates(0, 3); // неделя (7 дней)
-
-visibleDays.forEach((d, i) => dayHeaders[i].textContent = d.label);
-
 function saveData() {
   localStorage.setItem(storageKey, JSON.stringify(userData));
 }
 
 function render() {
+  const visibleDays = getNDates(offset, 1); // три дня вокруг offset
+  const progressDays = getNDates(offset, 3); // 7 дней вокруг offset
+
+  visibleDays.forEach((d, i) => dayHeaders[i].textContent = d.label);
+
   table.innerHTML = '';
   userData.habits.forEach(habit => {
     const tr = document.createElement('tr');
