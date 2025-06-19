@@ -9,21 +9,30 @@
 <body>
   <div class="container">
 
-    <!-- 👤 Выбор или ввод участника -->
+    <!-- 👤 Выбор / создание участника -->
     <h1>Трекер Привычек</h1>
 
-    <label for="user-select">Существующие участники:</label>
-    <select id="user-select"></select>
+    <div class="user-controls">
+      <label for="user-select">Существующие участники:</label>
+      <select id="user-select"></select>
+      <button id="delete-user" title="Удалить участника">🗑️</button>
 
-    <label for="new-user">Новое имя:</label>
-    <input type="text" id="new-user" placeholder="Введите имя" />
-    <button id="set-user">Установить</button>
+      <label for="new-user">Новое имя:</label>
+      <input type="text" id="new-user" placeholder="Введите имя" />
+
+      <button id="set-user" title="Добавить">
+        <img src="pngegg (1).png" alt="➕" class="icon-button" />
+      </button>
+    </div>
 
     <h2 id="username-title">Участник не выбран</h2>
 
     <!-- 📅 Ползунок -->
     <label for="day-range">Смещение по дате:</label>
-    <input type="range" id="day-range" min="-30" max="30" value="0" />
+    <div class="range-controls">
+      <input type="range" id="day-range" min="-30" max="30" value="0" />
+      <button id="reset-range" title="Сегодня">📍</button>
+    </div>
 
     <!-- 📋 Таблица -->
     <table id="habit-table">
@@ -43,7 +52,9 @@
     <!-- ➕ Добавление привычки -->
     <div class="add-habit">
       <input type="text" id="new-habit" placeholder="Новая привычка" />
-      <button id="add-btn">➕ Добавить</button>
+      <button id="add-btn">
+        <span class="plus">➕</span> Добавить
+      </button>
     </div>
 
   </div>
