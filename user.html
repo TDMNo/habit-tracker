@@ -6,6 +6,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Привычки пользователя</title>
   <link rel="stylesheet" href="styles.css" />
+  <style>
+    td.delete-col { width: 30px; }
+    td.name-col { min-width: 140px; text-align: left; }
+    td.progress-bar {
+      width: 100px;
+      height: 10px;
+      background-color: #222;
+      border: 1px solid #00ff9c;
+      position: relative;
+    }
+    .progress-fill {
+      height: 100%;
+      background-color: #00ff9c;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -13,12 +28,12 @@
     <table id="habit-table">
       <thead>
         <tr>
+          <th></th>
           <th>Привычка</th>
           <th id="day1"></th>
           <th id="day2"></th>
           <th id="day3"></th>
-          <th>Прогресс</th>
-          <th></th>
+          <th>Прогресс (7д)</th>
         </tr>
       </thead>
       <tbody></tbody>
