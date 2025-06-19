@@ -1,104 +1,63 @@
-/* styles.css */
-body {
-  margin: 0;
-  font-family: monospace;
-  background-color: #0a0a0a;
-  color: #00ff9c;
-}
+<!-- user.html -->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Привычки пользователя</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    td.delete-col { width: 30px; }
+    td.name-col { min-width: 140px; text-align: left; }
+    td.progress-bar {
+      height: 10px;
+      background-color: #222;
+      border: 1px solid #00ff9c;
+      position: relative;
+      white-space: nowrap;
+    }
+    .progress-fill {
+      height: 100%;
+      background-color: #00ff9c;
+    }
+    .circle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="username">Привычки</h1>
 
-.container {
-  padding: 20px;
-  max-width: 900px;
-  margin: auto;
-}
+    <div class="slider-container">
+      <label for="day-range">📅 Дни:</label>
+      <input type="range" id="day-range" min="-30" max="30" value="0" />
+    </div>
 
-input, button, select {
-  padding: 8px;
-  margin-top: 8px;
-  margin-bottom: 16px;
-  font-size: 1rem;
-  border-radius: 5px;
-  border: none;
-  outline: none;
-}
+    <table id="habit-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Привычка</th>
+          <th id="day1"></th>
+          <th id="day2"></th>
+          <th id="day3"></th>
+          <th>Прогресс (7д)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-button {
-  background-color: #00ff9c;
-  color: #000;
-  cursor: pointer;
-}
+    <div class="add-habit">
+      <input type="text" id="new-habit" placeholder="Новая привычка" />
+      <button id="add-btn">➕ Добавить</button>
+    </div>
+  </div>
 
-button:hover {
-  background-color: #00cc7a;
-}
+  <script src="app.js"></script>
+</body>
+</html>
 
-.add-habit {
-  display: flex;
-  gap: 10px;
-}
-
-h1 {
-  margin-bottom: 20px;
-}
-
-select {
-  width: 100%;
-  max-width: 300px;
-}
-
-input[type="text"] {
-  flex: 1;
-}
-
-/* Таблица */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-}
-
-th, td {
-  padding: 10px;
-  text-align: center;
-  border: 1px solid #00ff9c20;
-}
-
-th {
-  background-color: #111;
-}
-
-/* Кружки */
-.circle {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  margin: auto;
-}
-
-.circle[data-status="done"] {
-  background-color: #00ff00;
-}
-
-.circle[data-status="fail"] {
-  background-color: red;
-}
-
-.circle[data-status=""] {
-  background-color: #444;
-  border: 1px solid #666;
-}
-
-/* Прогресс бар */
-td.progress-bar {
-  width: 120px;
-  height: 10px;
-  background-color: #222;
-  border: 1px solid #00ff9c;
-  position: relative;
-  padding: 0;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: #00ff9c;
-}
