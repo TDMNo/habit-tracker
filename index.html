@@ -1,4 +1,3 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -10,48 +9,45 @@
 <body>
   <div class="container">
 
-    <!-- 👤 БЛОК ВЫБОРА И СОЗДАНИЯ УЧАСТНИКА -->
-    <div id="entry-screen">
-      <h1>Трекер Привычек</h1>
+    <!-- 👤 Выбор или ввод участника -->
+    <h1>Трекер Привычек</h1>
 
-      <label for="user-select">Существующие участники:</label>
-      <select id="user-select"></select>
+    <label for="user-select">Существующие участники:</label>
+    <select id="user-select"></select>
 
-      <label for="new-user">Новое имя:</label>
-      <input type="text" id="new-user" placeholder="Введите имя" />
-      <button id="create-user">Перейти</button>
-    </div>
+    <label for="new-user">Новое имя:</label>
+    <input type="text" id="new-user" placeholder="Введите имя" />
+    <button id="set-user">Установить</button>
 
-    <!-- 📋 БЛОК САМОГО ТРЕКЕРА -->
-    <div id="tracker-screen" style="display: none;">
-      <h1 id="username">Привычки: </h1>
+    <h2 id="username-title">Участник не выбран</h2>
 
-      <label for="day-range">Смещение по дате:</label>
-      <input type="range" id="day-range" min="-30" max="30" value="0" />
+    <!-- 📅 Ползунок -->
+    <label for="day-range">Смещение по дате:</label>
+    <input type="range" id="day-range" min="-30" max="30" value="0" />
 
-      <table id="habit-table">
-        <thead>
-          <tr>
-            <th class="delete-col"></th>
-            <th class="name-col">Привычка</th>
-            <th id="day1">День 1</th>
-            <th id="day2">День 2</th>
-            <th id="day3">День 3</th>
-            <th class="progress-col">Прогресс (7д)</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
+    <!-- 📋 Таблица -->
+    <table id="habit-table">
+      <thead>
+        <tr>
+          <th class="delete-col"></th>
+          <th class="name-col">Привычка</th>
+          <th id="day1">День 1</th>
+          <th id="day2">День 2</th>
+          <th id="day3">День 3</th>
+          <th class="progress-col">Прогресс (7д)</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
 
-      <div class="add-habit">
-        <input type="text" id="new-habit" placeholder="Новая привычка" />
-        <button id="add-btn">➕ Добавить</button>
-      </div>
+    <!-- ➕ Добавление привычки -->
+    <div class="add-habit">
+      <input type="text" id="new-habit" placeholder="Новая привычка" />
+      <button id="add-btn">➕ Добавить</button>
     </div>
 
   </div>
 
-  <!-- 📜 Скрипт -->
   <script src="app.js"></script>
 </body>
 </html>
