@@ -28,7 +28,8 @@ function getNDates(centerOffset = 0, range = 1) {
     d.setDate(d.getDate() + i - range);
     return {
       label: d.toLocaleDateString('ru-RU', { weekday: 'short', day: '2-digit', month: '2-digit' }),
-      key: d.toISOString().split('T')[0]
+      key: d.toISOString().split('T')[0],
+      isToday: d.toDateString() === new Date().toDateString()
     };
   });
 }
@@ -41,7 +42,11 @@ function render() {
   const visibleDays = getNDates(offset, 1); // три дня вокруг offset
   const progressDays = getNDates(offset, 3); // 7 дней вокруг offset
 
-  visibleDays.forEach((d, i) => dayHeaders[i].textContent = d.label);
+  visibleDays.forEach((d, i) => {
+    const th = dayHeaders[i];
+    th.textContent = d.label;
+    th.classList.toggle('current-day', d.isToday);
+  });
 
   table.innerHTML = '';
   userData.habits.forEach(habit => {
