@@ -32,6 +32,25 @@ button:hover {
   background-color: #00cc7a;
 }
 
+.add-habit {
+  display: flex;
+  gap: 10px;
+}
+
+h1 {
+  margin-bottom: 20px;
+}
+
+select {
+  width: 100%;
+  max-width: 300px;
+}
+
+input[type="text"] {
+  flex: 1;
+}
+
+/* Таблица */
 table {
   width: 100%;
   border-collapse: collapse;
@@ -48,6 +67,7 @@ th {
   background-color: #111;
 }
 
+/* Кружки */
 .circle {
   width: 24px;
   height: 24px;
@@ -65,9 +85,20 @@ th {
 
 .circle[data-status=""] {
   background-color: #444;
+  border: 1px solid #666;
 }
 
-.add-habit {
-  display: flex;
-  gap: 10px;
+/* Прогресс бар */
+td.progress-bar {
+  width: 120px;
+  height: 10px;
+  background-color: #222;
+  border: 1px solid #00ff9c;
+  position: relative;
+  padding: 0;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #00ff9c;
 }
