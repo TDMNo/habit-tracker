@@ -1,56 +1,57 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Трекер Привычек</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="container">
-    <h1>💡 Трекер Привычек</h1>
-    <p class="subtitle">Следи за своими победами каждую неделю</p>
-    <div class="participant">
-      <label for="participant">Выберите участника:</label>
-      <select id="participant">
-        <option>Лёня</option>
-        <option>Гриша</option>
-      </select>
-      <input type="text" id="newName" placeholder="Новое имя" />
-      <button>➕</button>
-    </div>
+    <h1>Выбор участника</h1>
+    <label for="user-select">Существующие участники:</label>
+    <select id="user-select"></select>
 
-    <table id="habitTable">
-      <thead>
-        <tr>
-          <th>Привычка</th>
-          <th>ПН</th>
-          <th>ВТ</th>
-          <th>СР</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Зарядка</td>
-          <td><span class="dot done"></span></td>
-          <td><span class="dot"></span></td>
-          <td><span class="dot missed"></span></td>
-        </tr>
-        <tr>
-          <td>Чтение</td>
-          <td><span class="dot missed"></span></td>
-          <td><span class="dot done"></span></td>
-          <td><span class="dot done"></span></td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="add-habit">
-      <input type="text" placeholder="Новая привычка" />
-      <button>➕</button>
-    </div>
+    <label for="new-user">Новый участник:</label>
+    <input type="text" id="new-user" placeholder="Имя участника" />
+    <button id="create-user">Создать</button>
   </div>
 
-  <script src="main.js"></script>
+  <script>
+    const select = document.getElementById('user-select');
+    const input = document.getElementById('new-user');
+    const btn = document.getElementById('create-user');
+
+    function loadUsers() {
+      select.innerHTML = '';
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('habit_')) {
+          const name = key.replace('habit_', '');
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          select.appendChild(option);
+        }
+      });
+    }
+
+    btn.onclick = () => {
+      const name = input.value.trim();
+      if (!name) return alert('Введите имя');
+      if (!localStorage.getItem('habit_' + name)) {
+        localStorage.setItem('habit_' + name, JSON.stringify({ name, habits: [], data: {} }));
+      }
+      window.location.href = `user.html?name=${encodeURIComponent(name)}`;
+    };
+
+    select.onchange = () => {
+      if (select.value) {
+        window.location.href = `user.html?name=${encodeURIComponent(select.value)}`;
+      }
+    };
+
+    loadUsers();
+  </script>
 </body>
 </html>
