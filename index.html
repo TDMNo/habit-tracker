@@ -4,54 +4,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Трекер Привычек</title>
+  <title>Трекер Привычек — вход</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="container">
-    <h1>Выбор участника</h1>
-    <label for="user-select">Существующие участники:</label>
+
+    <!-- 🔷 Заголовок страницы -->
+    <h1>Трекер привычек</h1>
+
+    <!-- 🔽 Выбор существующего пользователя -->
+    <label for="user-select">Выберите участника:</label>
     <select id="user-select"></select>
 
-    <label for="new-user">Новый участник:</label>
-    <input type="text" id="new-user" placeholder="Имя участника" />
+    <!-- ✏️ Создание нового участника -->
+    <label for="new-user">Новое имя:</label>
+    <input type="text" id="new-user" placeholder="Введите имя" />
     <button id="create-user">Создать</button>
+
   </div>
 
-  <script>
-    const select = document.getElementById('user-select');
-    const input = document.getElementById('new-user');
-    const btn = document.getElementById('create-user');
-
-    function loadUsers() {
-      select.innerHTML = '';
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('habit_')) {
-          const name = key.replace('habit_', '');
-          const option = document.createElement('option');
-          option.value = name;
-          option.textContent = name;
-          select.appendChild(option);
-        }
-      });
-    }
-
-    btn.onclick = () => {
-      const name = input.value.trim();
-      if (!name) return alert('Введите имя');
-      if (!localStorage.getItem('habit_' + name)) {
-        localStorage.setItem('habit_' + name, JSON.stringify({ name, habits: [], data: {} }));
-      }
-      window.location.href = `user.html?name=${encodeURIComponent(name)}`;
-    };
-
-    select.onchange = () => {
-      if (select.value) {
-        window.location.href = `user.html?name=${encodeURIComponent(select.value)}`;
-      }
-    };
-
-    loadUsers();
-  </script>
+  <!-- 📜 Скрипт логики входа -->
+  <script src="index.js"></script>
 </body>
 </html>
