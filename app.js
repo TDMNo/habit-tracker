@@ -1,13 +1,13 @@
 // app.js
 
-// ============================
-// 📦 DOM-элементы
-// ============================
+// 🔧 DOM-элементы
 const select = document.getElementById('user-select');
 const input = document.getElementById('new-user');
 const setUserBtn = document.getElementById('set-user');
+const deleteUserBtn = document.getElementById('delete-user');
 const title = document.getElementById('username-title');
 const rangeInput = document.getElementById('day-range');
+const resetRangeBtn = document.getElementById('reset-range');
 const dayHeaders = [
   document.getElementById('day1'),
   document.getElementById('day2'),
@@ -17,16 +17,12 @@ const table = document.getElementById('habit-table').querySelector('tbody');
 const addBtn = document.getElementById('add-btn');
 const newHabitInput = document.getElementById('new-habit');
 
-// ============================
 // 🔁 Состояние
-// ============================
 let userName = null;
 let userData = null;
 let offset = 0;
 
-// ============================
-// 🔧 Работа с датами
-// ============================
+// 📦 Дата-утилита
 function getNDates(centerOffset = 0, range = 1) {
   const base = new Date();
   base.setDate(base.getDate() + centerOffset);
@@ -41,9 +37,7 @@ function getNDates(centerOffset = 0, range = 1) {
   });
 }
 
-// ============================
-// 💾 Работа с localStorage
-// ============================
+// 💾 Сохранение/загрузка
 function saveUserData() {
   localStorage.setItem('habit_' + userName, JSON.stringify(userData));
 }
@@ -63,13 +57,47 @@ function loadUsers() {
 
 function loadUserData(name) {
   const key = 'habit_' + name;
-  const data = JSON.parse(localStorage.getItem(key)) || { name, habits: [], data: {} };
-  return data;
+  return JSON.parse(localStorage.getItem(key)) || { name, habits: [], data: {} };
 }
 
-// ============================
-// 📋 Основной рендер таблицы
-// ============================
+// 🧠 Установка активного пользователя
+function setUser(name) {
+  userName = name;
+
+  // создаём если нет
+  const key = 'habit_' + name;
+  if (!localStorage.getItem(key)) {
+    localStorage.setItem(key, JSON.stringify({ name, habits: [], data: {} }));
+  }
+
+  userData = loadUserData(name);
+  title.textContent = `Привычки: ${name}`;
+  saveUserData();
+  render();
+  loadUsers();
+}
+
+// ❌ Удаление активного пользователя
+function deleteUser() {
+  if (!userName) return alert('Нет выбранного участника');
+  if (!confirm(`Удалить участника ${userName}? Это удалит все данные!`)) return;
+
+  localStorage.removeItem('habit_' + userName);
+  userName = null;
+  userData = null;
+  title.textContent = 'Участник не выбран';
+  table.innerHTML = '';
+  loadUsers();
+}
+
+// 🔄 Сброс смещения к сегодняшнему дню
+function resetRange() {
+  offset = 0;
+  rangeInput.value = 0;
+  render();
+}
+
+// 📋 Рендер таблицы привычек
 function render() {
   if (!userData) return;
 
@@ -135,30 +163,15 @@ function render() {
   });
 }
 
-// ============================
-// ⚙️ Установить участника
-// ============================
-function setUser(name) {
-  userName = name;
-  const key = 'habit_' + name;
-if (!localStorage.getItem(key)) {
-  localStorage.setItem(key, JSON.stringify({ name, habits: [], data: {} }));
-}
-userData = loadUserData(name);
-  title.textContent = `Привычки: ${name}`;
-  saveUserData();
-  render();
-}
-
-// ============================
-// 🎯 Слушатели
-// ============================
+// ▶️ Слушатели
 setUserBtn.onclick = () => {
   const name = input.value.trim() || select.value;
   if (!name) return alert('Введите или выберите имя');
   setUser(name);
-  loadUsers();
 };
+
+deleteUserBtn.onclick = deleteUser;
+resetRangeBtn.onclick = resetRange;
 
 rangeInput.oninput = () => {
   offset = parseInt(rangeInput.value);
@@ -175,7 +188,5 @@ addBtn.onclick = () => {
   }
 };
 
-// ============================
 // 🚀 Старт
-// ============================
 loadUsers();
