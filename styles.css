@@ -122,4 +122,23 @@ th, td {
   background-color: #00ffcc22;
 }
 
+/* 🗑 Неоновая кнопка удаления участника */
+.neon-trash {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff5c5c;
+  background-color: transparent;
+  border: 2px solid #ff5c5c;
+  border-radius: 5px;
+  padding: 4px 10px;
+  margin-left: 10px;
+  cursor: pointer;
+  box-shadow: 0 0 8px #ff5c5c, 0 0 15px #ff5c5c inset;
+  transition: background 0.2s;
+}
+
+.neon-trash:hover {
+  background-color: #ff5c5c22;
+}
+
 
