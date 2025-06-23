@@ -148,6 +148,8 @@ userData = loadUserData(name);
   title.textContent = `Привычки: ${name}`;
   saveUserData();
   render();
+   addBtn.disabled = false;
+  newHabitInput.disabled = false;
 }
 
 // ============================
@@ -167,7 +169,7 @@ rangeInput.oninput = () => {
 
 addBtn.onclick = () => {
   const habit = newHabitInput.value.trim();
-  if (habit && !userData.habits.includes(habit)) {
+if (habit && userData && !userData.habits.includes(habit)) {
     userData.habits.push(habit);
     saveUserData();
     newHabitInput.value = '';
@@ -179,3 +181,8 @@ addBtn.onclick = () => {
 // 🚀 Старт
 // ============================
 loadUsers();
+loadUsers();
+
+addBtn.disabled = true;
+newHabitInput.disabled = true;
+
