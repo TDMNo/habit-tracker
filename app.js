@@ -176,13 +176,18 @@ if (habit && userData && !userData.habits.includes(habit)) {
     render();
   }
 };
+select.addEventListener('change', () => {
+  const selectedName = select.value;
+  if (selectedName) {
+    setUser(selectedName);
+  }
+});
 
 // ============================
 // 🚀 Старт
 // ============================
-loadUsers();
-loadUsers();
 
+// Загружаем список участников
 loadUsers();
 
 // Если есть участники — выбираем первого
