@@ -183,6 +183,34 @@ select.addEventListener('change', () => {
   }
 });
 
+// 🗑 Удаление участника
+const deleteUserBtn = document.getElementById('delete-user');
+
+deleteUserBtn.onclick = () => {
+  if (!userName) return;
+
+  const confirmDelete = confirm(`Удалить участника "${userName}"? Это действие необратимо.`);
+  if (!confirmDelete) return;
+
+  localStorage.removeItem('habit_' + userName);
+
+  loadUsers();
+
+  // Если остались участники — выбираем первого
+  if (select.options.length > 0) {
+    const first = select.options[0].value;
+    setUser(first);
+    select.value = first;
+  } else {
+    userName = null;
+    userData = null;
+    title.textContent = 'Участник не выбран';
+    table.innerHTML = '';
+    addBtn.disabled = true;
+    newHabitInput.disabled = true;
+  }
+};
+
 // ============================
 // 🚀 Старт
 // ============================
