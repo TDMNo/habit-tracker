@@ -104,3 +104,13 @@ th, td {
   display: flex;
   gap: 10px;
 }
+/* ➕ Иконка-кнопка */
+.icon-button {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  cursor: pointer;
+  padding: 0;
+  border: none;
+  background: none;
+}
