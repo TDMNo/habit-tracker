@@ -156,22 +156,27 @@ userData = loadUserData(name);
 // 🎯 Слушатели
 // ============================
 setUserBtn.onclick = () => {
-  const name = input.value.trim() || select.value;
-  if (!name) return alert('Введите или выберите имя');
+  const name = input.value.trim();
+  if (!name) return alert('Введите имя');
 
-  // если пользователь уже есть — просто переключаемся
-  const alreadyExists = [...select.options].some(opt => opt.value === name);
-  if (!alreadyExists) {
-    // создаём в localStorage
-    localStorage.setItem('habit_' + name, JSON.stringify({ name, habits: [], data: {} }));
+  const key = 'habit_' + name;
+
+  // Если участника ещё нет — создаём
+  if (!localStorage.getItem(key)) {
+    localStorage.setItem(key, JSON.stringify({ name, habits: [], data: {} }));
   }
 
-  loadUsers();            // Перерисуем select, чтобы был этот пользователь
-  select.value = name;    // Отметим его в select
-  setUser(name);          // Загрузим данные
+  loadUsers(); // Перерисуем список
 
-  input.value = '';       // Очистим поле
+  // Отложим выбор участника на 100мс, чтобы успел перерисоваться select
+  setTimeout(() => {
+    select.value = name;
+    setUser(name);
+  }, 100);
+
+  input.value = '';
 };
+
 
 
 // 🗑 Удаление участника
