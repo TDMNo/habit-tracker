@@ -104,4 +104,22 @@ th, td {
   display: flex;
   gap: 10px;
 }
+/* ➕ Неоновый плюс */
+.neon-plus {
+  font-size: 20px;
+  font-weight: bold;
+  color: #00ffcc;
+  background-color: transparent;
+  border: 2px solid #00ffcc;
+  border-radius: 5px;
+  padding: 4px 10px;
+  cursor: pointer;
+  box-shadow: 0 0 8px #00ffcc, 0 0 15px #00ffcc inset;
+  transition: background 0.2s;
+}
+
+.neon-plus:hover {
+  background-color: #00ffcc22;
+}
+
 
