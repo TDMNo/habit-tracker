@@ -140,5 +140,51 @@ th, td {
 .neon-trash:hover {
   background-color: #ff5c5c22;
 }
+/* 🌙 Модалка */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  background: #111;
+  border: 2px solid #00ffcc;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  color: #00ffcc;
+  box-shadow: 0 0 15px #00ffcc;
+}
+
+.modal-buttons {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.confirm-btn {
+  background: #00ffcc;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  color: black;
+}
+
+.confirm-btn.cancel {
+  background: #ff5c5c;
+  color: white;
+}
 
 
