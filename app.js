@@ -158,30 +158,21 @@ userData = loadUserData(name);
 setUserBtn.onclick = () => {
   const name = input.value.trim() || select.value;
   if (!name) return alert('Введите или выберите имя');
-  setUser(name);
-  loadUsers();
+
+  // если пользователь уже есть — просто переключаемся
+  const alreadyExists = [...select.options].some(opt => opt.value === name);
+  if (!alreadyExists) {
+    // создаём в localStorage
+    localStorage.setItem('habit_' + name, JSON.stringify({ name, habits: [], data: {} }));
+  }
+
+  loadUsers();            // Перерисуем select, чтобы был этот пользователь
+  select.value = name;    // Отметим его в select
+  setUser(name);          // Загрузим данные
+
+  input.value = '';       // Очистим поле
 };
 
-rangeInput.oninput = () => {
-  offset = parseInt(rangeInput.value);
-  render();
-};
-
-addBtn.onclick = () => {
-  const habit = newHabitInput.value.trim();
-if (habit && userData && !userData.habits.includes(habit)) {
-    userData.habits.push(habit);
-    saveUserData();
-    newHabitInput.value = '';
-    render();
-  }
-};
-select.addEventListener('change', () => {
-  const selectedName = select.value;
-  if (selectedName) {
-    setUser(selectedName);
-  }
-});
 
 // 🗑 Удаление участника
 const deleteUserBtn = document.getElementById('delete-user');
