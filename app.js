@@ -1,4 +1,4 @@
-// app.js
+// app.jsMore actions
 
 // ============================
 // 📦 DOM-элементы
@@ -159,27 +159,6 @@ setUserBtn.onclick = () => {
   const name = input.value.trim() || select.value;
   if (!name) return alert('Введите или выберите имя');
   setUser(name);
-  
-setUserBtn.onclick = () => {
-  const name = input.value.trim() || select.value;
-  if (!name) return alert('Введите или выберите имя');
-
-  // Если такого пользователя ещё нет — создаём
-  const key = 'habit_' + name;
-  if (!localStorage.getItem(key)) {
-    localStorage.setItem(key, JSON.stringify({ name, habits: [], data: {} }));
-  }
-
-  setUser(name);
-  loadUsers();
-  select.value = name;
-
-  // ✅ Разблокируем элементы, если вдруг были отключены
-  addBtn.disabled = false;
-  newHabitInput.disabled = false;
-};
-
-  
   loadUsers();
 };
 
@@ -214,6 +193,8 @@ const confirmNo = document.getElementById('confirm-no');
 deleteUserBtn.onclick = () => {
   if (!userName) return;
 
+  const confirmDelete = confirm(`Удалить участника "${userName}"? Это действие необратимо.`);
+  if (!confirmDelete) return;
   confirmText.textContent = `Удалить участника "${userName}"?`;
   confirmModal.classList.remove('hidden');
 
@@ -236,11 +217,13 @@ deleteUserBtn.onclick = () => {
     }
   };
 
+  localStorage.removeItem('habit_' + userName);
   confirmNo.onclick = () => {
     confirmModal.classList.add('hidden');
   };
 };
 
+  loadUsers();
 
   // Если остались участники — выбираем первого
   if (select.options.length > 0) {
@@ -273,5 +256,5 @@ if (select.options.length > 0) {
   // Если никого нет — блокируем кнопки
   addBtn.disabled = true;
   newHabitInput.disabled = true;
-}
+}More actions
 
