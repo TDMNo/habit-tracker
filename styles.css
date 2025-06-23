@@ -1,49 +1,106 @@
-/* Иконка-плюс как кнопка */
-.icon-button {
-  width: 32px;
-  height: 32px;
-  vertical-align: middle;
-  cursor: pointer;
-  padding: 0;
-  border: none;
-  background: none;
+/* styles.css — глобальные стили */
+
+/* 🌒 Основной фон и шрифт */
+body {
+  margin: 0;
+  font-family: monospace;
+  background-color: #0a0a0a;
+  color: #00ff9c;
 }
 
-/* Кнопки рядом в одной строке */
-.user-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+/* 📦 Центрированный контейнер */
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
 }
 
-/* Кнопка удаления участника */
-#delete-user {
-  background: transparent;
-  border: none;
-  color: red;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
-
-/* Обёртка для ползунка и кнопки "сегодня" */
-.range-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Кнопка 📍 */
-#reset-range {
-  background-color: #00ff9c;
-  color: black;
+/* 🧾 Инпуты и кнопки */
+input, button, select {
+  padding: 8px;
   font-size: 1rem;
   border: none;
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: 5px;
+  margin-top: 10px;
+}
+
+button {
+  background-color: #00ff9c;
+  color: black;
   cursor: pointer;
 }
 
-#reset-range:hover {
+button:hover {
   background-color: #00cc7a;
+}
+
+/* 📋 Таблица */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  border: 1px solid #00ff9c30;
+  text-align: center;
+  padding: 8px;
+}
+
+/* 🔲 Удаление (узкая колонка) */
+.delete-col {
+  width: 30px;
+}
+
+/* 🏷 Название привычки */
+.name-col {
+  text-align: left;
+  padding-left: 10px;
+}
+
+/* 🟢🟥⚪ Круги состояния */
+.circle {
+  width: 24px;
+  height: 24px;
+  margin: auto;
+  border-radius: 50%;
+  background-color: #444;
+  cursor: pointer;
+}
+
+.circle[data-status="done"] {
+  background-color: #00ff00;
+}
+
+.circle[data-status="fail"] {
+  background-color: red;
+}
+
+/* 📊 Прогресс бар */
+.progress-col {
+  width: 120px;
+}
+
+.progress-bar {
+  height: 10px;
+  background-color: #333;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #00ff9c;
+}
+
+/* 📅 Подсветка текущего дня */
+.current-day {
+  border-bottom: 2px solid #00ffee;
+}
+
+/* ➕ Блок добавления */
+.add-habit {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
 }
