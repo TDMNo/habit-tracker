@@ -235,21 +235,19 @@ deleteUserBtn.onclick = () => {
 // 🚀 Старт
 // ============================
 
-// Загружаем список участников
-loadUsers();
+window.onload = () => {
+  loadUsers();
 
-// Если есть участники — выбираем первого
-if (select.options.length > 0) {
-  const firstUser = select.options[0].value;
-  setUser(firstUser);          // Загружаем данные
-  select.value = firstUser;    // Отмечаем в select
-} else {
-  
-  // Если никого нет — блокируем только кнопку привычки
-  userName = null;
-  userData = null;
-  title.textContent = 'Участник не выбран';
-  table.innerHTML = '';
-  addBtn.disabled = true;
-}More actions
-
+  if (select.options.length > 0) {
+    const firstUser = select.options[0].value;
+    setUser(firstUser);          // Загружаем данные
+    select.value = firstUser;    // Отмечаем в select
+  } else {
+    // Если никого нет — блокируем только кнопку привычки
+    userName = null;
+    userData = null;
+    title.textContent = 'Участник не выбран';
+    table.innerHTML = '';
+    addBtn.disabled = true;
+  }
+};
