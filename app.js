@@ -159,6 +159,27 @@ setUserBtn.onclick = () => {
   const name = input.value.trim() || select.value;
   if (!name) return alert('Введите или выберите имя');
   setUser(name);
+  
+setUserBtn.onclick = () => {
+  const name = input.value.trim() || select.value;
+  if (!name) return alert('Введите или выберите имя');
+
+  // Если такого пользователя ещё нет — создаём
+  const key = 'habit_' + name;
+  if (!localStorage.getItem(key)) {
+    localStorage.setItem(key, JSON.stringify({ name, habits: [], data: {} }));
+  }
+
+  setUser(name);
+  loadUsers();
+  select.value = name;
+
+  // ✅ Разблокируем элементы, если вдруг были отключены
+  addBtn.disabled = false;
+  newHabitInput.disabled = false;
+};
+
+  
   loadUsers();
 };
 
