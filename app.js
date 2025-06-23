@@ -183,6 +183,16 @@ if (habit && userData && !userData.habits.includes(habit)) {
 loadUsers();
 loadUsers();
 
-addBtn.disabled = true;
-newHabitInput.disabled = true;
+loadUsers();
+
+// Если есть участники — выбираем первого
+if (select.options.length > 0) {
+  const firstUser = select.options[0].value;
+  setUser(firstUser);          // Загружаем данные
+  select.value = firstUser;    // Отмечаем в select
+} else {
+  // Если никого нет — блокируем кнопки
+  addBtn.disabled = true;
+  newHabitInput.disabled = true;
+}
 
