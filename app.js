@@ -244,8 +244,12 @@ if (select.options.length > 0) {
   setUser(firstUser);          // Загружаем данные
   select.value = firstUser;    // Отмечаем в select
 } else {
-  // Если никого нет — блокируем кнопки
+  
+  // Если никого нет — блокируем только кнопку привычки
+  userName = null;
+  userData = null;
+  title.textContent = 'Участник не выбран';
+  table.innerHTML = '';
   addBtn.disabled = true;
-  newHabitInput.disabled = true;
 }More actions
 
