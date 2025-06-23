@@ -185,16 +185,41 @@ select.addEventListener('change', () => {
 
 // 🗑 Удаление участника
 const deleteUserBtn = document.getElementById('delete-user');
+const confirmModal = document.getElementById('confirm-modal');
+const confirmText = document.getElementById('confirm-text');
+const confirmYes = document.getElementById('confirm-yes');
+const confirmNo = document.getElementById('confirm-no');
 
 deleteUserBtn.onclick = () => {
   if (!userName) return;
 
-  const confirmDelete = confirm(`Удалить участника "${userName}"? Это действие необратимо.`);
-  if (!confirmDelete) return;
+  confirmText.textContent = `Удалить участника "${userName}"?`;
+  confirmModal.classList.remove('hidden');
 
-  localStorage.removeItem('habit_' + userName);
+  confirmYes.onclick = () => {
+    localStorage.removeItem('habit_' + userName);
+    confirmModal.classList.add('hidden');
+    loadUsers();
 
-  loadUsers();
+    if (select.options.length > 0) {
+      const first = select.options[0].value;
+      setUser(first);
+      select.value = first;
+    } else {
+      userName = null;
+      userData = null;
+      title.textContent = 'Участник не выбран';
+      table.innerHTML = '';
+      addBtn.disabled = true;
+      newHabitInput.disabled = true;
+    }
+  };
+
+  confirmNo.onclick = () => {
+    confirmModal.classList.add('hidden');
+  };
+};
+
 
   // Если остались участники — выбираем первого
   if (select.options.length > 0) {
