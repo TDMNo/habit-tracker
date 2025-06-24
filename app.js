@@ -166,15 +166,11 @@ setUserBtn.onclick = () => {
     localStorage.setItem(key, JSON.stringify({ name, habits: [], data: {} }));
   }
 
-  loadUsers(); // Перерисуем список
+  loadUsers();            // Перерисуем список
+  select.value = name;    // Отметим пользователя
+  setUser(name);          // Загрузим его данные
 
-  // Отложим выбор участника на 100мс, чтобы успел перерисоваться select
-  setTimeout(() => {
-    select.value = name;
-    setUser(name);
-  }, 100);
-
-  input.value = '';
+  input.value = '';       // Очистим поле ввода
 };
 
 
@@ -213,7 +209,6 @@ deleteUserBtn.onclick = () => {
     }
   };
 
-  localStorage.removeItem('habit_' + userName);
   confirmNo.onclick = () => {
     confirmModal.classList.add('hidden');
   };
@@ -228,16 +223,18 @@ deleteUserBtn.onclick = () => {
 window.onload = () => {
   loadUsers();
 
-  if (select.options.length > 0) {
-    const firstUser = select.options[0].value;
-    setUser(firstUser);          // Загружаем данные
-    select.value = firstUser;    // Отмечаем в select
-  } else {
-    // Если никого нет — блокируем только кнопку привычки
-    userName = null;
-    userData = null;
-    title.textContent = 'Участник не выбран';
-    table.innerHTML = '';
-    addBtn.disabled = true;More actions
-  }
+  setTimeout(() => {
+    if (select.options.length > 0) {
+      const firstUser = select.options[0].value;
+      setUser(firstUser);          // Загружаем данные
+      select.value = firstUser;    // Отмечаем в select
+    } else {
+      // Если никого нет — блокируем только кнопку привычки
+      userName = null;
+      userData = null;
+      title.textContent = 'Участник не выбран';
+      table.innerHTML = '';
+      addBtn.disabled = true;
+    }
+  }, 50); // небольшая задержка в 50мс
 };
