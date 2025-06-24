@@ -166,11 +166,15 @@ setUserBtn.onclick = () => {
     localStorage.setItem(key, JSON.stringify({ name, habits: [], data: {} }));
   }
 
-  loadUsers();            // Перерисуем список
-  select.value = name;    // Отметим пользователя
-  setUser(name);          // Загрузим его данные
+  loadUsers(); // Перерисуем список
 
-  input.value = '';       // Очистим поле ввода
+  // Отложим выбор участника на 100мс, чтобы успел перерисоваться select
+  setTimeout(() => {
+    select.value = name;
+    setUser(name);
+  }, 100);
+
+  input.value = '';
 };
 
 
