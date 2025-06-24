@@ -155,6 +155,8 @@ userData = loadUserData(name);
 // ============================
 // 🎯 Слушатели
 // ============================
+
+// Добавление участника
 setUserBtn.onclick = () => {
   const name = input.value.trim();
   if (!name) return alert('Введите имя');
@@ -166,16 +168,32 @@ setUserBtn.onclick = () => {
     localStorage.setItem(key, JSON.stringify({ name, habits: [], data: {} }));
   }
 
-  loadUsers(); // Перерисуем список
+  loadUsers();            // Перерисуем список
+  select.value = name;    // Отметим пользователя
+  setUser(name);          // Загрузим его данные
 
-  // Отложим выбор участника на 100мс, чтобы успел перерисоваться select
-  setTimeout(() => {
-    select.value = name;
-    setUser(name);
-  }, 100);
-
-  input.value = '';
+  input.value = '';       // Очистим поле ввода
 };
+
+// Добавление привычки
+addBtn.onclick = () => {
+  const habit = newHabitInput.value.trim();
+  if (habit && userData && !userData.habits.includes(habit)) {
+    userData.habits.push(habit);
+    saveUserData();
+    newHabitInput.value = '';
+    render();
+  }
+};
+
+// Переключение между участниками из списка
+select.addEventListener('change', () => {
+  const selectedName = select.value;
+  if (selectedName) {
+    setUser(selectedName);
+  }
+});
+
 
 
 
