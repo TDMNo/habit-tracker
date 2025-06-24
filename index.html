@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html>More actions
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
@@ -12,15 +12,17 @@
     <!-- 👤 Выбор или ввод участника -->
     <h1>Трекер Привычек</h1>
 
-    <label for="user-select"> Участники:</label>
+    <label for="user-select">Существующие участники:</label>
     <select id="user-select"></select>
-    
-<!-- 🗑 Кнопка удаления участника -->
-<button id="delete-user" class="neon-trash" title="Удалить участника">🗑️</button>
-    
+
     <label for="new-user">Новое имя:</label>
+    <input type="text" id="new-user" placeholder="Введите имя" />
+    <button id="set-user">Установить</button>
  <input type="text" id="new-user" placeholder="Введите имя" />
-<button id="set-user" class="neon-plus">+</button>
+<button id="set-user">
+  <img src="plus.png" alt="+" class="icon-button" />
+</button>
+
 
     <h2 id="username-title">Участник не выбран</h2>
 
@@ -42,17 +44,6 @@
       </thead>
       <tbody></tbody>
     </table>
-    
-    <!-- 🧼 Модалка подтверждения удаления -->
-<div id="confirm-modal" class="modal hidden">
-  <div class="modal-content">
-    <p id="confirm-text">Удалить?</p>
-    <div class="modal-buttons">
-      <button id="confirm-yes" class="confirm-btn">ОК</button>
-      <button id="confirm-no" class="confirm-btn cancel">Отмена</button>
-    </div>
-  </div>
-</div>
 
     <!-- ➕ Добавление привычки -->
     <div class="add-habit">
