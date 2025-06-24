@@ -207,9 +207,11 @@ const confirmNo = document.getElementById('confirm-no');
 deleteUserBtn.onclick = () => {
   if (!userName) return;
 
+  // Показываем свою модалку
   confirmText.textContent = `Удалить участника "${userName}"?`;
   confirmModal.classList.remove('hidden');
 
+  // Если нажали ОК
   confirmYes.onclick = () => {
     localStorage.removeItem('habit_' + userName);
     confirmModal.classList.add('hidden');
@@ -229,10 +231,12 @@ deleteUserBtn.onclick = () => {
     }
   };
 
+  // Если нажали Отмена
   confirmNo.onclick = () => {
     confirmModal.classList.add('hidden');
   };
 };
+
 
 
 
