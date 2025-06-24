@@ -1,4 +1,4 @@
-// app.jsMore actions
+// app.jsMore actionsMore actions
 
 // ============================
 // 📦 DOM-элементы
@@ -219,7 +219,7 @@ deleteUserBtn.onclick = () => {
   };
 };
 
- 
+
 
 // ============================
 // 🚀 Старт
@@ -238,5 +238,6 @@ window.onload = () => {
     userData = null;
     title.textContent = 'Участник не выбран';
     table.innerHTML = '';
-    addBtn.disabled = true;
+    addBtn.disabled = true;More actions
   }
+};
