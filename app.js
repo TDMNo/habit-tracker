@@ -240,4 +240,3 @@ window.onload = () => {
     table.innerHTML = '';
     addBtn.disabled = true;
   }
-};
