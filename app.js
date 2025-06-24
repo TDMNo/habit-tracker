@@ -207,8 +207,6 @@ const confirmNo = document.getElementById('confirm-no');
 deleteUserBtn.onclick = () => {
   if (!userName) return;
 
-  const confirmDelete = confirm(`Удалить участника "${userName}"? Это действие необратимо.`);
-  if (!confirmDelete) return;
   confirmText.textContent = `Удалить участника "${userName}"?`;
   confirmModal.classList.remove('hidden');
 
