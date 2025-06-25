@@ -194,8 +194,6 @@ select.addEventListener('change', () => {
 });
 
 
-
-
 // 🗑 Удаление участника
 const deleteUserBtn = document.getElementById('delete-user');
 const confirmModal = document.getElementById('confirm-modal');
@@ -236,8 +234,27 @@ deleteUserBtn.onclick = () => {
   };
 };
 
+// Ползунок
+let swipeStartX = null;
 
+function handleSwipeStart(e) {
+  swipeStartX = e.touches ? e.touches[0].clientX : e.clientX;
+}
 
+function handleSwipeEnd(e) {
+  if (swipeStartX === null) return;
+  const endX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+  const diff = endX - swipeStartX;
+
+  // минимальная длина свайпа
+  if (Math.abs(diff) > 50) {
+    if (diff < 0 && offset < 30) offset++;     // свайп влево
+    if (diff > 0 && offset > -30) offset--;    // свайп вправо
+    render();
+  }
+
+  swipeStartX = null;
+}
 
 // ============================
 // 🚀 Старт
@@ -260,4 +277,11 @@ window.onload = () => {
       addBtn.disabled = true;
     }
   }, 50); // небольшая задержка в 50мс
+  // 👉 Привязываем свайп к таблице
+  const habitTableWrapper = document.getElementById('habit-table');
+  habitTableWrapper.addEventListener('touchstart', handleSwipeStart);
+  habitTableWrapper.addEventListener('touchend', handleSwipeEnd);
+  habitTableWrapper.addEventListener('mousedown', handleSwipeStart);
+  habitTableWrapper.addEventListener('mouseup', handleSwipeEnd);
+};
 };
