@@ -1,4 +1,7 @@
 // app.jsMore actionsMore actions
+window.onerror = function(message, source, lineno, colno, error) {
+  alert("Ошибка: " + message + "\n" + source + ":" + lineno);
+};
 
 // ============================
 // 📦 DOM-элементы
