@@ -1,7 +1,4 @@
 // app.jsMore actionsMore actions
-window.onerror = function(message, source, lineno, colno, error) {
-  alert("Ошибка: " + message + "\n" + source + ":" + lineno);
-};
 
 // ============================
 // 📦 DOM-элементы
@@ -75,19 +72,24 @@ function loadUserData(name) {
 function render() {
   if (!userData) return;
 
-  const visibleDays = getNDates(offset, 1);
-  const progressDays = getNDates(offset, 3);
+  // 📅 Получаем даты для отображения и анализа прогресса
+  const visibleDays = getNDates(offset, 1);   // три дня: вчера, сегодня, завтра
+  const progressDays = getNDates(offset, 3);  // семь дней для прогресса
 
+  // 🗓 Обновляем заголовки таблицы (дата и день недели)
   dayHeaders.forEach((th, i) => {
     th.textContent = visibleDays[i].label;
     th.classList.toggle('current-day', visibleDays[i].isToday);
   });
 
+  // 🧹 Очищаем таблицу перед перерисовкой
   table.innerHTML = '';
 
+  // 🔁 Рисуем каждую привычку
   userData.habits.forEach(habit => {
     const tr = document.createElement('tr');
 
+    // 🗑 Колонка удаления привычки
     const tdDel = document.createElement('td');
     tdDel.textContent = '🗑️';
     tdDel.style.cursor = 'pointer';
@@ -98,13 +100,16 @@ function render() {
     };
     tr.appendChild(tdDel);
 
+    // 🏷 Название привычки
     const tdName = document.createElement('td');
     tdName.textContent = habit;
     tr.appendChild(tdName);
 
+    // ⚪ Кружки — состояния по дням
     visibleDays.forEach(d => {
       const td = document.createElement('td');
       td.className = 'circle';
+
       const status = userData.data?.[d.key]?.[habit] || '';
       td.dataset.status = status;
 
@@ -123,6 +128,7 @@ function render() {
       tr.appendChild(td);
     });
 
+    // 📊 Прогресс-бар за 7 дней
     const tdBar = document.createElement('td');
     tdBar.className = 'progress-bar';
     const fill = document.createElement('div');
@@ -133,25 +139,10 @@ function render() {
 
     tdBar.appendChild(fill);
     tr.appendChild(tdBar);
+
+    // ➕ Добавляем строку в таблицу
     table.appendChild(tr);
   });
-}
-
-// ============================
-// ⚙️ Установить участника
-// ============================
-function setUser(name) {
-  userName = name;
- const key = 'habit_' + name;
-if (!localStorage.getItem(key)) {
-  localStorage.setItem(key, JSON.stringify({ name, habits: [], data: {} }));
-}
-userData = loadUserData(name);
-  title.textContent = `Привычки: ${name}`;
-  saveUserData();
-  render();
-   addBtn.disabled = false;
-  newHabitInput.disabled = false;
 }
 
 // ============================
