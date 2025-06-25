@@ -7,7 +7,6 @@ const select = document.getElementById('user-select');
 const input = document.getElementById('new-user');
 const setUserBtn = document.getElementById('set-user');
 const title = document.getElementById('username-title');
-const rangeInput = document.getElementById('day-range');
 const dayHeaders = [
   document.getElementById('day1'),
   document.getElementById('day2'),
