@@ -162,6 +162,37 @@ function render() {
     tbody.appendChild(tr);
   });
 }
+document.addEventListener('touchstart', e => {
+  if (e.target.classList.contains('circle')) {
+    isDragging = true;
+    dragStartX = e.touches[0].clientX;
+    hasScrolled = false;
+  }
+});
+
+document.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+  const delta = e.touches[0].clientX - dragStartX;
+
+  if (hasScrolled) return;
+
+  if (Math.abs(delta) > 30) {
+    if (delta < 0 && slideOffset < allDates.length - 2) {
+      slideOffset += 1;
+      hasScrolled = true;
+      render();
+    } else if (delta > 0 && slideOffset > 1) {
+      slideOffset -= 1;
+      hasScrolled = true;
+      render();
+    }
+  }
+});
+
+document.addEventListener('touchend', () => {
+  isDragging = false;
+  hasScrolled = false;
+});
 
 // ============================
 // 🎮 Drag-свайп мышкой
