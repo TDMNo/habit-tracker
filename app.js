@@ -146,12 +146,14 @@ function render() {
       });
 
       td.addEventListener('touchstart', e => {
+        e.preventDefault();
         isDragging = true;
         dragStartX = e.touches[0].clientX;
         hasScrolled = false;
-      });
+      }, { passive: false });
 
       td.addEventListener('touchmove', e => {
+        e.preventDefault();
         if (!isDragging) return;
         const delta = e.touches[0].clientX - dragStartX;
         if (hasScrolled) return;
@@ -164,7 +166,7 @@ function render() {
           hasScrolled = true;
           render();
         }
-      });
+      }, { passive: false });
 
       td.addEventListener('touchend', () => {
         isDragging = false;
