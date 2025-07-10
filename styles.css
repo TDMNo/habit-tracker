@@ -186,28 +186,19 @@ th, td {
   background: #ff5c5c;
   color: white;
 }
-.dragging {
-  cursor: grabbing;
-  user-select: none;
-}
-#day-slider {
-  cursor: grab;
-}
-#day-slider::-webkit-scrollbar {
-  display: none;
-}
-#day-slider {
-  -ms-overflow-style: none;  /* IE и Edge */
-  scrollbar-width: none;     /* Firefox */
-}
-.day-header {
-  padding: 10px;
-  border-radius: 6px;
-  background-color: #111;
-  min-width: 80px;
-  text-align: center;
-  scroll-snap-align: center;
-  box-shadow: 0 0 6px #00ffcc60;
+.day-slider {
+  display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  scroll-snap-type: x mandatory;
+  justify-content: center;
+  max-width: 100%;
 }
 
+.day-header {
+  min-width: 80px;
+  scroll-snap-align: center;
+  text-align: center;
+  font-weight: bold;
+}
 
