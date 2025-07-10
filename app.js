@@ -3,8 +3,8 @@
 // ============================
 let isDragging = false;
 let dragStartX = 0;
-let lastDelta = 0;
-let hasScrolled = false;
+let slideStartOffset = 0;
+let lastStep = 0;
 
 const select = document.getElementById('user-select');
 const input = document.getElementById('new-user');
@@ -141,36 +141,37 @@ function render() {
       td.addEventListener('mousedown', e => {
         isDragging = true;
         dragStartX = e.clientX;
-        lastDelta = 0;
-        hasScrolled = false;
+        slideStartOffset = slideOffset;
+        lastStep = 0;
       });
 
       td.addEventListener('touchstart', e => {
         e.preventDefault();
         isDragging = true;
         dragStartX = e.touches[0].clientX;
-        hasScrolled = false;
+        slideStartOffset = slideOffset;
+        lastStep = 0;
       }, { passive: false });
 
       td.addEventListener('touchmove', e => {
         e.preventDefault();
         if (!isDragging) return;
-        const delta = e.touches[0].clientX - dragStartX;
-        if (hasScrolled) return;
-        if (Math.abs(delta) > 30) {
-          if (delta < 0 && slideOffset < allDates.length - 2) {
-            slideOffset += 1;
-          } else if (delta > 0 && slideOffset > 1) {
-            slideOffset -= 1;
-          }
-          hasScrolled = true;
+
+        const deltaX = e.touches[0].clientX - dragStartX;
+        const stepSize = 80;
+        const step = Math.round(deltaX / stepSize);
+
+        if (step !== lastStep) {
+          let newOffset = slideStartOffset - step;
+          newOffset = Math.max(1, Math.min(allDates.length - 2, newOffset));
+          slideOffset = newOffset;
+          lastStep = step;
           render();
         }
       }, { passive: false });
 
       td.addEventListener('touchend', () => {
         isDragging = false;
-        hasScrolled = false;
       });
 
       tr.appendChild(td);
@@ -197,21 +198,20 @@ function render() {
 document.addEventListener('mousemove', e => {
   if (!isDragging) return;
   const delta = e.clientX - dragStartX;
-  if (hasScrolled) return;
-  if (Math.abs(delta) > 30) {
-    if (delta < 0 && slideOffset < allDates.length - 2) {
-      slideOffset += 1;
-    } else if (delta > 0 && slideOffset > 1) {
-      slideOffset -= 1;
-    }
-    hasScrolled = true;
+  const stepSize = 80;
+  const step = Math.round(delta / stepSize);
+
+  if (step !== lastStep) {
+    let newOffset = slideStartOffset - step;
+    newOffset = Math.max(1, Math.min(allDates.length - 2, newOffset));
+    slideOffset = newOffset;
+    lastStep = step;
     render();
   }
 });
 
 document.addEventListener('mouseup', () => {
   isDragging = false;
-  hasScrolled = false;
 });
 
 // ============================
