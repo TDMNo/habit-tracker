@@ -112,16 +112,13 @@ function render() {
   const visibleDays = allDates.slice(slideOffset - 1, slideOffset + 2);
 
   // 2. Обновляем заголовки таблицы
-for (let i = 0; i < 3; i++) {
-  const th = document.getElementById(`day-col${i + 1}`);
-  const d = visibleDays[i];
-  if (th && d) {
-    th.textContent = d.label;
-    th.classList.toggle('current-day', d.isToday);
-  }
-}
-
-
+  dayHeaders.forEach((th, i) => {
+    const d = visibleDays[i];
+    if (d) {
+      th.textContent = d.label;
+      th.classList.toggle('current-day', d.isToday);
+    }
+  });
 
   // 3. Очищаем таблицу
   tbody.innerHTML = '';
@@ -302,8 +299,6 @@ window.onload = () => {
     if (select.options.length > 0) {
       const firstUser = select.options[0].value;
       setUser(firstUser);
-    
-
       select.value = firstUser;
 
       // Ждём, пока DOM отрендерится
@@ -331,37 +326,6 @@ window.onload = () => {
           }
         });
 
-        // 🖱 Поддержка drag-to-scroll мышью
-let isDragging = false;
-let startX_mouse = 0;
-let scrollLeft = 0;
-
-slider.addEventListener('mousedown', e => {
-  isDragging = true;
-  slider.classList.add('dragging');
-  startX_mouse = e.pageX - slider.offsetLeft;
-  scrollLeft = slider.scrollLeft;
-});
-
-slider.addEventListener('mouseleave', () => {
-  isDragging = false;
-  slider.classList.remove('dragging');
-});
-
-slider.addEventListener('mouseup', () => {
-  isDragging = false;
-  slider.classList.remove('dragging');
-});
-
-slider.addEventListener('mousemove', e => {
-  if (!isDragging) return;
-  e.preventDefault();
-  const x = e.pageX - slider.offsetLeft;
-  const walk = (x - startX_mouse) * 1.5; // чувствительность
-  slider.scrollLeft = scrollLeft - walk;
-});
-
-
         // 📌 Центруем "сегодня"
         const center = document.getElementById('day2');
         if (center) {
@@ -374,6 +338,7 @@ slider.addEventListener('mousemove', e => {
       }, 100); // конец внутреннего setTimeout
     }
 
+    // 👇 ЭТО ELSE — на том же уровне, что if (select.options.length > 0)
     else {
   userName = null;
   userData = null;
