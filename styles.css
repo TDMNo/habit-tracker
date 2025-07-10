@@ -201,4 +201,14 @@ th, td {
   text-align: center;
   font-weight: bold;
 }
-
+#day-slider {
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 10px;
+}
+.date-th {
+  width: 80px;
+  text-align: center;
+  font-weight: bold;
+  color: #00ffcc;
+}
