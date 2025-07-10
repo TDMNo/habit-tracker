@@ -66,6 +66,8 @@ th, td {
   border-radius: 50%;
   background-color: #444;
   cursor: pointer;
+    touch-action: none; /* 👈 обязательно! */
+  user-select: none;
 }
 
 .circle[data-status="done"] {
@@ -212,3 +214,4 @@ th, td {
   font-weight: bold;
   color: #00ffcc;
 }
+
