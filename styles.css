@@ -178,7 +178,7 @@ h2 {
   }
 }
 
-/* 📋 Таблица */
+/* 📋 Таблица - МАКСИМАЛЬНО КОМПАКТНАЯ */
 .table-container {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -188,65 +188,73 @@ h2 {
 }
 
 table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 320px; /* Уменьшили минимальную ширину */
-  table-layout: fixed; /* Фиксированная ширина колонок */
+  width: 100% !important;
+  border-collapse: collapse !important;
+  min-width: 250px !important; /* Очень маленькая минимальная ширина */
+  max-width: 100% !important;
+  table-layout: fixed !important; /* Фиксированная ширина колонок */
 }
 
 th, td {
-  border: 1px solid #00ff9c30;
-  text-align: center;
-  padding: 6px 2px;
-  vertical-align: middle;
-  overflow: hidden;
+  border: 1px solid #00ff9c30 !important;
+  text-align: center !important;
+  padding: 3px 1px !important;
+  vertical-align: middle !important;
+  overflow: hidden !important;
+  font-size: 0.7rem !important;
 }
 
 @media (max-width: 767px) {
   th, td {
-    padding: 4px 1px;
-    font-size: 0.85rem;
+    padding: 2px 1px !important;
+    font-size: 0.65rem !important;
   }
   
   table {
-    min-width: 300px; /* Еще меньше для мобильных */
+    min-width: 230px !important; /* Еще меньше для мобильных */
   }
 }
 
-/* 🔲 Удаление (узкая колонка) */
+/* 🔲 Удаление - ЖЕСТКИЕ ОГРАНИЧЕНИЯ */
 .delete-col {
-  width: 30px;
-  min-width: 30px;
-  padding: 4px 2px;
+  width: 20px !important;
+  min-width: 18px !important;
+  max-width: 20px !important;
+  padding: 2px 1px !important;
+  font-size: 0.8rem !important;
 }
 
 @media (max-width: 767px) {
   .delete-col {
-    width: 25px;
-    min-width: 25px;
-    font-size: 0.9rem;
+    width: 18px !important;
+    min-width: 16px !important;
+    max-width: 18px !important;
+    font-size: 0.75rem !important;
   }
 }
 
-/* 🏷 Название привычки */
+/* 🏷 Название привычки - ЖЕСТКИЕ ОГРАНИЧЕНИЯ */
 .name-col {
-  text-align: left;
-  padding-left: 8px;
-  padding-right: 4px;
-  min-width: 80px;
-  max-width: 120px;
-  word-wrap: break-word;
-  white-space: normal;
-  width: auto;
+  text-align: left !important;
+  padding-left: 4px !important;
+  padding-right: 2px !important;
+  min-width: 50px !important;
+  max-width: 70px !important;
+  width: 70px !important;
+  word-wrap: break-word !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  font-size: 0.75rem !important;
 }
 
 @media (max-width: 767px) {
   .name-col {
-    min-width: 60px;
-    max-width: 90px;
-    padding-left: 4px;
-    padding-right: 2px;
-    font-size: 0.85rem;
+    min-width: 45px !important;
+    max-width: 65px !important;
+    width: 65px !important;
+    padding-left: 3px !important;
+    padding-right: 1px !important;
+    font-size: 0.7rem !important;
   }
 }
 
@@ -256,22 +264,25 @@ th, td {
   max-width: 100%;
 }
 
-/* 📅 Колонки дат */
+/* 📅 Колонки дат - ЖЕСТКИЕ ОГРАНИЧЕНИЯ */
 .date-th {
-  width: 60px;
-  min-width: 50px;
-  text-align: center;
-  font-weight: bold;
-  color: #00ffcc;
-  padding: 4px 2px;
+  width: 45px !important;
+  min-width: 40px !important;
+  max-width: 45px !important;
+  text-align: center !important;
+  font-weight: bold !important;
+  color: #00ffcc !important;
+  padding: 3px 1px !important;
+  font-size: 0.65rem !important;
 }
 
 @media (max-width: 767px) {
   .date-th {
-    width: 50px;
-    min-width: 45px;
-    font-size: 0.75rem;
-    padding: 4px 1px;
+    width: 40px !important;
+    min-width: 35px !important;
+    max-width: 40px !important;
+    font-size: 0.6rem !important;
+    padding: 2px 1px !important;
   }
 }
 
@@ -332,18 +343,21 @@ th, td {
   background-color: #444;
 }
 
-/* 📊 Прогресс бар */
+/* 📊 Прогресс бар - ЖЕСТКИЕ ОГРАНИЧЕНИЯ */
 .progress-col {
-  width: 80px;
-  min-width: 70px;
-  padding: 4px 2px;
+  width: 50px !important;
+  min-width: 45px !important;
+  max-width: 50px !important;
+  padding: 2px 1px !important;
+  font-size: 0.65rem !important;
 }
 
 @media (max-width: 767px) {
   .progress-col {
-    width: 60px;
-    min-width: 55px;
-    font-size: 0.75rem;
+    width: 45px !important;
+    min-width: 40px !important;
+    max-width: 45px !important;
+    font-size: 0.6rem !important;
   }
 }
 
