@@ -444,7 +444,7 @@ function render() {
 function handleDrag(clientX) {
   if (!isDragging) return;
   const delta = clientX - dragStartX;
-  const stepSize = 80;
+  const stepSize = 60; // Уменьшили чувствительность для лучшего контроля
   const step = Math.round(delta / stepSize);
 
   if (step !== lastStep) {
@@ -456,22 +456,28 @@ function handleDrag(clientX) {
   }
 }
 
-document.addEventListener('mousemove', e => handleDrag(e.clientX));
-
-document.addEventListener('touchmove', e => {
-  if (isDragging) {
-    e.preventDefault();
-    handleDrag(e.touches[0].clientX);
-  }
-}, { passive: false });
+// Только для десктопа
+document.addEventListener('mousemove', e => {
+  if ('ontouchstart' in window) return; // Отключаем на touch устройствах
+  handleDrag(e.clientX);
+});
 
 document.addEventListener('mouseup', () => {
+  if ('ontouchstart' in window) return; // Отключаем на touch устройствах
   isDragging = false;
 });
 
-document.addEventListener('touchend', () => {
-  isDragging = false;
-});
+// Отключаем глобальные touch обработчики (они теперь локальные на кружках)
+// document.addEventListener('touchmove', e => {
+//   if (isDragging) {
+//     e.preventDefault();
+//     handleDrag(e.touches[0].clientX);
+//   }
+// }, { passive: false });
+
+// document.addEventListener('touchend', () => {
+//   isDragging = false;
+// });
 
 // ============================
 // ⚙️ Установить участника
