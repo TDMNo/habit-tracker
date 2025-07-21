@@ -297,11 +297,6 @@ function generateAvailableMonths() {
 }
 
 // ============================
-// 💾 Работа с localStorage (теперь с PWA поддержкой)
-// ============================
-// Функции saveUserData, loadUsers, loadUserData уже определены выше в PWA секции
-
-// ============================
 // 📋 Основной рендер таблицы
 // ============================
 function render() {
@@ -371,10 +366,15 @@ function render() {
       const status = userData.data?.[d.key]?.[habit] || '';
       circle.dataset.status = status;
 
-      // Клик по кружку для изменения статуса
-      circle.onclick = (e) => {
-        e.stopPropagation();
-        const next = { '': 'done', 'done': 'fail', 'fail': '' }[status] || '';
+      // ===== НОВАЯ ЛОГИКА ОБРАБОТКИ СОБЫТИЙ =====
+      let touchStartTime = 0;
+      let isTouchMove = false;
+      let touchStartPos = { x: 0, y: 0 };
+      
+      // Функция изменения статуса
+      function changeStatus() {
+        const currentStatus = circle.dataset.status || '';
+        const next = { '': 'done', 'done': 'fail', 'fail': '' }[currentStatus] || '';
         circle.dataset.status = next;
 
         if (!userData.data[d.key]) userData.data[d.key] = {};
@@ -383,24 +383,90 @@ function render() {
 
         saveUserData();
         render();
-      };
+      }
 
-      // Обработчики для свайпа
-      circle.addEventListener('mousedown', e => {
+      // Обработка для мобильных устройств
+      circle.addEventListener('touchstart', (e) => {
+        touchStartTime = Date.now();
+        isTouchMove = false;
+        touchStartPos.x = e.touches[0].clientX;
+        touchStartPos.y = e.touches[0].clientY;
+        
+        // Инициализируем свайп только если прошло время
+        setTimeout(() => {
+          if (!isTouchMove && (Date.now() - touchStartTime) > 150) {
+            isDragging = true;
+            dragStartX = touchStartPos.x;
+            slideStartOffset = slideOffset;
+            lastStep = 0;
+          }
+        }, 150);
+      }, { passive: true });
+
+      circle.addEventListener('touchmove', (e) => {
+        const currentTime = Date.now();
+        const deltaTime = currentTime - touchStartTime;
+        const deltaX = Math.abs(e.touches[0].clientX - touchStartPos.x);
+        const deltaY = Math.abs(e.touches[0].clientY - touchStartPos.y);
+        
+        // Если движение значительное или прошло достаточно времени
+        if (deltaX > 10 || deltaY > 10 || deltaTime > 150) {
+          isTouchMove = true;
+          
+          // Если это горизонтальное движение, то свайп
+          if (deltaX > deltaY && deltaX > 20) {
+            e.preventDefault();
+            isDragging = true;
+            
+            const swipeX = e.touches[0].clientX - touchStartPos.x;
+            const stepSize = 60;
+            const step = Math.round(swipeX / stepSize);
+
+            if (step !== lastStep) {
+              let newOffset = slideStartOffset - step;
+              newOffset = Math.max(1, Math.min(allDates.length - 2, newOffset));
+              slideOffset = newOffset;
+              lastStep = step;
+              render();
+            }
+          }
+        }
+      }, { passive: false });
+
+      circle.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        
+        const touchEndTime = Date.now();
+        const touchDuration = touchEndTime - touchStartTime;
+        
+        isDragging = false;
+        
+        // Если касание было коротким и без движения - это клик
+        if (touchDuration < 300 && !isTouchMove) {
+          changeStatus();
+        }
+      }, { passive: false });
+
+      // Обработка для десктопа
+      circle.addEventListener('mousedown', (e) => {
+        // Только для устройств без сенсорного экрана
+        if ('ontouchstart' in window) return;
+        
         e.preventDefault();
         isDragging = true;
         dragStartX = e.clientX;
         slideStartOffset = slideOffset;
         lastStep = 0;
       });
-
-      circle.addEventListener('touchstart', e => {
-        e.preventDefault();
-        isDragging = true;
-        dragStartX = e.touches[0].clientX;
-        slideStartOffset = slideOffset;
-        lastStep = 0;
-      }, { passive: false });
+      
+      // Клик для десктопа
+      circle.addEventListener('click', (e) => {
+        // Только для устройств без сенсорного экрана
+        if ('ontouchstart' in window) return;
+        
+        e.stopPropagation();
+        changeStatus();
+      });
 
       circleContainer.appendChild(circle);
       td.appendChild(circleContainer);
@@ -439,12 +505,12 @@ function render() {
 }
 
 // ============================
-// 🎮 Drag-свайп
+// 🎮 Drag-свайп для десктопа
 // ============================
 function handleDrag(clientX) {
   if (!isDragging) return;
   const delta = clientX - dragStartX;
-  const stepSize = 60; // Уменьшили чувствительность для лучшего контроля
+  const stepSize = 60;
   const step = Math.round(delta / stepSize);
 
   if (step !== lastStep) {
@@ -457,27 +523,15 @@ function handleDrag(clientX) {
 }
 
 // Только для десктопа
-document.addEventListener('mousemove', e => {
-  if ('ontouchstart' in window) return; // Отключаем на touch устройствах
+document.addEventListener('mousemove', (e) => {
+  if ('ontouchstart' in window) return;
   handleDrag(e.clientX);
 });
 
 document.addEventListener('mouseup', () => {
-  if ('ontouchstart' in window) return; // Отключаем на touch устройствах
+  if ('ontouchstart' in window) return;
   isDragging = false;
 });
-
-// Отключаем глобальные touch обработчики (они теперь локальные на кружках)
-// document.addEventListener('touchmove', e => {
-//   if (isDragging) {
-//     e.preventDefault();
-//     handleDrag(e.touches[0].clientX);
-//   }
-// }, { passive: false });
-
-// document.addEventListener('touchend', () => {
-//   isDragging = false;
-// });
 
 // ============================
 // ⚙️ Установить участника
@@ -690,7 +744,7 @@ window.onload = () => {
   }, 50);
 };
 
-// Предотвращение зума на двойное касание на iOS
+// Отключаем зум на iOS
 document.addEventListener('touchstart', function(event) {
   if (event.touches.length > 1) {
     event.preventDefault();
