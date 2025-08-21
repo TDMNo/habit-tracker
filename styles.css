@@ -800,3 +800,30 @@ button:active {
 .table-container::-webkit-scrollbar-thumb:hover {
   background: #00cc7a;
 }
+/* === Список без сетки, как на макете === */
+table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+}
+
+th, td {
+  border: none !important;           /* убираем сетку */
+  background: #0f0f0f;              /* фон как у контейнера */
+  text-align: left !important;      
+  padding: 6px 8px !important;
+}
+
+tbody tr {
+  border-bottom: 1px solid #222;    /* тонкая разделительная линия */
+}
+
+tbody tr:last-child {
+  border-bottom: none;              /* убираем у последней */
+}
+
+/* Заголовки – минимальные */
+th {
+  font-size: 0.75rem !important;
+  color: #00ffccaa;                 /* полупрозрачный */
+  font-weight: normal;
+}
