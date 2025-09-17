@@ -216,12 +216,16 @@ function getAllDates() {
   for (let i = -31; i <= 32; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
+    
+    // Убираем пробел после запятой в дате
+    const fullLabel = d.toLocaleDateString('ru-RU', {
+      weekday: 'short',
+      day: '2-digit',
+      month: '2-digit'
+    });
+    
     dates.push({
-      label: d.toLocaleDateString('ru-RU', {
-        weekday: 'short',
-        day: '2-digit',
-        month: '2-digit'
-      }),
+      label: fullLabel.replace(', ', ','),
       key: d.toISOString().split('T')[0],
       isToday: d.toDateString() === new Date().toDateString(),
       date: d
@@ -989,4 +993,4 @@ document.addEventListener('touchend', function(event) {
     event.preventDefault();
   }
   lastTouchEnd = now;
-}, { passive: false })
+}, { passive: false });
