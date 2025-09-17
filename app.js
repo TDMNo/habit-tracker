@@ -194,6 +194,18 @@ let allDates = getAllDates();
 let slideOffset = 31;
 
 // ============================
+// 🎯 Переменные для Drag and Drop
+// ============================
+let isRowDragging = false;
+let draggedRowIndex = -1;
+let dragStartY = 0;
+let longPressTimer = null;
+let draggedRow = null;
+let dropIndicator = null;
+let touchStartTime = 0;
+let initialTouchY = 0;
+
+// ============================
 // 🔧 Работа с датами
 // ============================
 function getAllDates() {
@@ -297,6 +309,154 @@ function generateAvailableMonths() {
 }
 
 // ============================
+// 🎯 Функции Drag and Drop
+// ============================
+function createDropIndicator() {
+  const indicator = document.createElement('tr');
+  indicator.className = 'drop-indicator';
+  indicator.innerHTML = `
+    <td colspan="6" style="
+      height: 4px; 
+      padding: 0; 
+      background: linear-gradient(90deg, #00ff9c, #00cc7a); 
+      border-radius: 2px;
+      box-shadow: 0 0 10px #00ff9c;
+    "></td>
+  `;
+  return indicator;
+}
+
+function showDropIndicator(beforeRow) {
+  hideDropIndicator();
+  dropIndicator = createDropIndicator();
+  
+  if (beforeRow) {
+    beforeRow.parentNode.insertBefore(dropIndicator, beforeRow);
+  } else {
+    // Добавляем в конец
+    document.querySelector('#habit-table tbody').appendChild(dropIndicator);
+  }
+}
+
+function hideDropIndicator() {
+  if (dropIndicator) {
+    dropIndicator.remove();
+    dropIndicator = null;
+  }
+}
+
+function getRowIndexFromY(y) {
+  const rows = Array.from(document.querySelectorAll('#habit-table tbody tr:not(.drop-indicator)'));
+  
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const rect = row.getBoundingClientRect();
+    const rowMiddle = rect.top + rect.height / 2;
+    
+    if (y < rowMiddle) {
+      return i;
+    }
+  }
+  
+  return rows.length; // В конец списка
+}
+
+function startRowDrag(rowIndex, touchY) {
+  isRowDragging = true;
+  draggedRowIndex = rowIndex;
+  dragStartY = touchY;
+  initialTouchY = touchY;
+  
+  // Находим перетаскиваемую строку
+  const rows = Array.from(document.querySelectorAll('#habit-table tbody tr'));
+  draggedRow = rows[rowIndex];
+  
+  if (draggedRow) {
+    // Визуальное выделение перетаскиваемой строки
+    draggedRow.style.opacity = '0.7';
+    draggedRow.style.transform = 'scale(1.02)';
+    draggedRow.style.boxShadow = '0 5px 20px rgba(0, 255, 156, 0.5)';
+    draggedRow.style.zIndex = '1000';
+    draggedRow.style.position = 'relative';
+    draggedRow.style.backgroundColor = 'rgba(0, 255, 156, 0.1)';
+    
+    // Добавляем визуальную обратную связь
+    navigator.vibrate && navigator.vibrate(50); // Вибрация если поддерживается
+  }
+}
+
+function handleRowDrag(touchY) {
+  if (!isRowDragging || !draggedRow) return;
+  
+  const deltaY = touchY - dragStartY;
+  
+  // Перемещаем строку визуально
+  draggedRow.style.transform = `translateY(${deltaY}px) scale(1.02)`;
+  
+  // Определяем новую позицию
+  const newIndex = getRowIndexFromY(touchY);
+  const rows = Array.from(document.querySelectorAll('#habit-table tbody tr:not(.drop-indicator)'));
+  
+  if (newIndex >= 0 && newIndex <= rows.length) {
+    if (newIndex < rows.length) {
+      showDropIndicator(rows[newIndex]);
+    } else {
+      showDropIndicator(null); // В конец
+    }
+  }
+}
+
+function endRowDrag() {
+  if (!isRowDragging || !draggedRow) {
+    isRowDragging = false;
+    draggedRowIndex = -1;
+    return;
+  }
+  
+  // Определяем новую позицию
+  const rows = Array.from(document.querySelectorAll('#habit-table tbody tr:not(.drop-indicator)'));
+  let newIndex = draggedRowIndex;
+  
+  if (dropIndicator) {
+    const indicatorIndex = Array.from(dropIndicator.parentNode.children).indexOf(dropIndicator);
+    newIndex = indicatorIndex;
+    
+    // Корректируем индекс, если перемещаем вниз
+    if (newIndex > draggedRowIndex) {
+      newIndex--;
+    }
+  }
+  
+  // Перемещаем привычку в массиве
+  if (newIndex !== draggedRowIndex && newIndex >= 0 && newIndex < userData.habits.length) {
+    const habitToMove = userData.habits[draggedRowIndex];
+    userData.habits.splice(draggedRowIndex, 1);
+    userData.habits.splice(newIndex, 0, habitToMove);
+    
+    // Сохраняем данные
+    saveUserData();
+  }
+  
+  // Убираем визуальные эффекты
+  draggedRow.style.opacity = '';
+  draggedRow.style.transform = '';
+  draggedRow.style.boxShadow = '';
+  draggedRow.style.zIndex = '';
+  draggedRow.style.position = '';
+  draggedRow.style.backgroundColor = '';
+  
+  hideDropIndicator();
+  
+  // Сбрасываем состояние
+  isRowDragging = false;
+  draggedRowIndex = -1;
+  draggedRow = null;
+  
+  // Перерисовываем таблицу
+  render();
+}
+
+// ============================
 // 📋 Основной рендер таблицы
 // ============================
 function render() {
@@ -324,13 +484,15 @@ function render() {
 
   tbody.innerHTML = '';
 
-  userData.habits.forEach(habit => {
+  userData.habits.forEach((habit, habitIndex) => {
     const tr = document.createElement('tr');
+    tr.dataset.habitIndex = habitIndex;
 
     // Колонка удаления
     const tdDel = document.createElement('td');
     tdDel.innerHTML = '<span class="delete-habit">🗑️</span>';
-    tdDel.onclick = () => {
+    tdDel.onclick = (e) => {
+      e.stopPropagation();
       userData.habits = userData.habits.filter(h => h !== habit);
       saveUserData();
       render();
@@ -345,6 +507,69 @@ function render() {
     habitDiv.textContent = habit;
     tdName.appendChild(habitDiv);
     tr.appendChild(tdName);
+
+    // ============================
+    // 🎯 Drag and Drop обработчики для строки
+    // ============================
+    let rowTouchStartTime = 0;
+    let rowTouchStartY = 0;
+    let isRowTouchMove = false;
+    
+    // Обработка начала касания для всей строки (кроме кружков)
+    tr.addEventListener('touchstart', (e) => {
+      // Проверяем, что касание не на кружке или кнопке удаления
+      if (e.target.closest('.circle') || e.target.closest('.delete-habit')) {
+        return;
+      }
+      
+      rowTouchStartTime = Date.now();
+      rowTouchStartY = e.touches[0].clientY;
+      isRowTouchMove = false;
+      touchStartTime = rowTouchStartTime;
+      initialTouchY = rowTouchStartY;
+      
+      // Запускаем таймер долгого нажатия
+      longPressTimer = setTimeout(() => {
+        if (!isRowTouchMove && !isDragging && !isRowDragging) {
+          startRowDrag(habitIndex, rowTouchStartY);
+        }
+      }, 1000); // 1 секунда
+      
+    }, { passive: true });
+    
+    tr.addEventListener('touchmove', (e) => {
+      const deltaY = Math.abs(e.touches[0].clientY - rowTouchStartY);
+      
+      if (deltaY > 10) {
+        isRowTouchMove = true;
+        
+        // Отменяем таймер долгого нажатия если есть движение
+        if (longPressTimer && !isRowDragging) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+      }
+      
+      // Если уже перетаскиваем строку
+      if (isRowDragging) {
+        e.preventDefault();
+        handleRowDrag(e.touches[0].clientY);
+      }
+    }, { passive: false });
+    
+    tr.addEventListener('touchend', (e) => {
+      // Отменяем таймер долгого нажатия
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      
+      // Если перетаскивали строку, завершаем операцию
+      if (isRowDragging) {
+        e.preventDefault();
+        endRowDrag();
+      }
+    }, { passive: false });
 
     // Колонки с кружками для каждого дня
     allDates.forEach((d, i) => {
@@ -366,10 +591,10 @@ function render() {
       const status = userData.data?.[d.key]?.[habit] || '';
       circle.dataset.status = status;
 
-      // ===== НОВАЯ ЛОГИКА ОБРАБОТКИ СОБЫТИЙ =====
-      let touchStartTime = 0;
-      let isTouchMove = false;
-      let touchStartPos = { x: 0, y: 0 };
+      // ===== ЛОГИКА ОБРАБОТКИ СОБЫТИЙ ДЛЯ КРУЖКОВ =====
+      let circleTouchStartTime = 0;
+      let isCircleTouchMove = false;
+      let circleTouchStartPos = { x: 0, y: 0 };
       
       // Функция изменения статуса
       function changeStatus() {
@@ -387,16 +612,18 @@ function render() {
 
       // Обработка для мобильных устройств
       circle.addEventListener('touchstart', (e) => {
-        touchStartTime = Date.now();
-        isTouchMove = false;
-        touchStartPos.x = e.touches[0].clientX;
-        touchStartPos.y = e.touches[0].clientY;
+        e.stopPropagation(); // Предотвращаем всплытие к строке
+        
+        circleTouchStartTime = Date.now();
+        isCircleTouchMove = false;
+        circleTouchStartPos.x = e.touches[0].clientX;
+        circleTouchStartPos.y = e.touches[0].clientY;
         
         // Инициализируем свайп только если прошло время
         setTimeout(() => {
-          if (!isTouchMove && (Date.now() - touchStartTime) > 150) {
+          if (!isCircleTouchMove && (Date.now() - circleTouchStartTime) > 150 && !isRowDragging) {
             isDragging = true;
-            dragStartX = touchStartPos.x;
+            dragStartX = circleTouchStartPos.x;
             slideStartOffset = slideOffset;
             lastStep = 0;
           }
@@ -404,21 +631,23 @@ function render() {
       }, { passive: true });
 
       circle.addEventListener('touchmove', (e) => {
+        e.stopPropagation(); // Предотвращаем всплытие к строке
+        
         const currentTime = Date.now();
-        const deltaTime = currentTime - touchStartTime;
-        const deltaX = Math.abs(e.touches[0].clientX - touchStartPos.x);
-        const deltaY = Math.abs(e.touches[0].clientY - touchStartPos.y);
+        const deltaTime = currentTime - circleTouchStartTime;
+        const deltaX = Math.abs(e.touches[0].clientX - circleTouchStartPos.x);
+        const deltaY = Math.abs(e.touches[0].clientY - circleTouchStartPos.y);
         
         // Если движение значительное или прошло достаточно времени
         if (deltaX > 10 || deltaY > 10 || deltaTime > 150) {
-          isTouchMove = true;
+          isCircleTouchMove = true;
           
           // Если это горизонтальное движение, то свайп
-          if (deltaX > deltaY && deltaX > 20) {
+          if (deltaX > deltaY && deltaX > 20 && !isRowDragging) {
             e.preventDefault();
             isDragging = true;
             
-            const swipeX = e.touches[0].clientX - touchStartPos.x;
+            const swipeX = e.touches[0].clientX - circleTouchStartPos.x;
             const stepSize = 60;
             const step = Math.round(swipeX / stepSize);
 
@@ -435,14 +664,15 @@ function render() {
 
       circle.addEventListener('touchend', (e) => {
         e.preventDefault();
+        e.stopPropagation(); // Предотвращаем всплытие к строке
         
         const touchEndTime = Date.now();
-        const touchDuration = touchEndTime - touchStartTime;
+        const touchDuration = touchEndTime - circleTouchStartTime;
         
         isDragging = false;
         
         // Если касание было коротким и без движения - это клик
-        if (touchDuration < 300 && !isTouchMove) {
+        if (touchDuration < 300 && !isCircleTouchMove && !isRowDragging) {
           changeStatus();
         }
       }, { passive: false });
@@ -453,6 +683,7 @@ function render() {
         if ('ontouchstart' in window) return;
         
         e.preventDefault();
+        e.stopPropagation();
         isDragging = true;
         dragStartX = e.clientX;
         slideStartOffset = slideOffset;
@@ -758,4 +989,4 @@ document.addEventListener('touchend', function(event) {
     event.preventDefault();
   }
   lastTouchEnd = now;
-}, { passive: false });
+}, { passive: false })
