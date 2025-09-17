@@ -215,6 +215,84 @@ th, td {
   }
 }
 
+/* ==============================
+   🎯 DRAG AND DROP СТИЛИ
+   ==============================*/
+   
+/* Стили для перетаскиваемой строки */
+tbody tr {
+  transition: all 0.2s ease;
+  cursor: grab;
+}
+
+tbody tr:hover {
+  background-color: rgba(0, 255, 156, 0.03);
+}
+
+/* Строка в процессе перетаскивания */
+tbody tr.dragging {
+  opacity: 0.7;
+  transform: scale(1.02);
+  box-shadow: 0 5px 20px rgba(0, 255, 156, 0.5);
+  z-index: 1000;
+  position: relative;
+  background-color: rgba(0, 255, 156, 0.1) !important;
+  cursor: grabbing;
+}
+
+/* Индикатор места вставки */
+.drop-indicator td {
+  height: 4px !important;
+  padding: 0 !important;
+  background: linear-gradient(90deg, #00ff9c, #00cc7a) !important;
+  border-radius: 2px !important;
+  box-shadow: 0 0 10px #00ff9c !important;
+  border: none !important;
+  animation: dropGlow 1s ease-in-out infinite alternate;
+}
+
+@keyframes dropGlow {
+  from {
+    box-shadow: 0 0 5px #00ff9c;
+    background: linear-gradient(90deg, #00ff9c, #00cc7a);
+  }
+  to {
+    box-shadow: 0 0 15px #00ff9c, 0 0 20px #00ff9c;
+    background: linear-gradient(90deg, #00cc7a, #00ff9c);
+  }
+}
+
+/* Визуальная подсказка для drag and drop */
+.drag-hint {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: #00ff9c;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 2px solid #00ff9c;
+  font-size: 0.9rem;
+  z-index: 10000;
+  pointer-events: none;
+  box-shadow: 0 0 20px rgba(0, 255, 156, 0.5);
+  animation: fadeInOut 2s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Отключаем выделение текста при перетаскивании */
+tbody tr {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 /* 🔲 Удаление - ЖЕСТКИЕ ОГРАНИЧЕНИЯ */
 .delete-col {
   width: 20px !important;
@@ -826,4 +904,44 @@ th {
   font-size: 0.75rem !important;
   color: #00ffccaa;                 /* полупрозрачный */
   font-weight: normal;
+}
+
+/* =======================================
+   📱 ДОПОЛНИТЕЛЬНЫЕ ПОДСКАЗКИ ДЛЯ DRAG
+   ======================================= */
+
+/* Подсказка о долгом нажатии */
+@media (max-width: 767px) {
+  .swipe-indicator {
+    font-size: 0.75rem;
+    color: #888;
+    text-align: center;
+    padding: 8px;
+    background: rgba(0, 255, 156, 0.08);
+    border-radius: 6px;
+    margin: 15px 0;
+    line-height: 1.4;
+  }
+  
+  .swipe-indicator::after {
+    content: " • Долго нажмите на строку для перестановки";
+    color: #aaa;
+    font-size: 0.7rem;
+  }
+}
+
+/* Анимация для первого показа drag-подсказки */
+@keyframes dragHint {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}
+
+tbody tr:nth-child(1) {
+  animation: dragHint 3s ease-in-out 2s;
 }
