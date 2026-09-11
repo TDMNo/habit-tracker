@@ -11,6 +11,7 @@
 - `DONE` Habit definitions separated from daily HabitEntry history.
 - `DONE` Local calendar date handling without UTC day-shift bug.
 - `DONE` Base PWA manifest and offline shell.
+- `DONE` Persistent light/dark theme switch with mobile UI polish.
 - `NEXT` Visual acceptance on real phone viewport.
 
 ## Phase 2 — Data and accounts
