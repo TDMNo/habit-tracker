@@ -38,9 +38,11 @@ trap cleanup EXIT
 compose exec -T postgres sh -ec 'createdb -U "$POSTGRES_USER" "$1"' _ "$TEST_DB"
 compose exec -T postgres sh -ec 'pg_restore -U "$POSTGRES_USER" -d "$1" --no-owner --no-privileges' _ "$TEST_DB" < "$BACKUP_FILE"
 
-SCHEMA_CHECK="$(compose exec -T postgres sh -ec 'psql -U "$POSTGRES_USER" -d "$1" -Atqc "SELECT concat_ws(\",\", to_regclass(\"public.users\"), to_regclass(\"public.habits\"), to_regclass(\"public.habit_entries\"), to_regclass(\"public.schema_migrations\"));"' _ "$TEST_DB")"
-[[ "$SCHEMA_CHECK" == *users* && "$SCHEMA_CHECK" == *habits* && "$SCHEMA_CHECK" == *habit_entries* && "$SCHEMA_CHECK" == *schema_migrations* ]] \
-  || fail "restored database is missing required tables"
+for table in users habits habit_entries schema_migrations; do
+  query="SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='${table}' LIMIT 1;"
+  result="$(compose exec -T postgres sh -ec 'psql -U "$POSTGRES_USER" -d "$1" -Atqc "$2"' _ "$TEST_DB" "$query")"
+  [[ "$result" == "1" ]] || fail "restored database is missing required table: $table"
+done
 
 cleanup
 trap - EXIT
