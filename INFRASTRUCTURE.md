@@ -2,104 +2,151 @@
 
 ## 1. Status
 
-The new Habit Tracker application is not deployed yet, but its production execution path now has a verified server target and dedicated GitHub Actions runner.
+Full-stack production topology уже реализована в коде, но не активирована на `docker-home`.
 
-The legacy Vanilla JS prototype remains in the repository only as a product/UX reference during migration. It is not the target production architecture.
+GitHub остаётся source of truth. Реальный deploy закрыт server-side activation gate до подготовки persistent storage, backup storage, secrets и HTTPS route.
 
 ## 2. Source of truth
 
-- GitHub repository: `TDMNo/habit-tracker`.
-- Main branch: `main`.
-- GitHub remains the source of truth for code and release history.
-- Production checkout: `/opt/stacks/habit-tracker`.
+- repository: `TDMNo/habit-tracker`;
+- branch: `main`;
+- production checkout: `/opt/stacks/habit-tracker`;
+- production host: `docker-home`;
+- deploy runner user: `leo`.
 
-## 3. Production host
+## 3. Application stack
 
-Confirmed production host:
+- frontend: React + TypeScript + Vite PWA;
+- backend: Node 22 + Express;
+- database: PostgreSQL 16;
+- auth: server-side sessions in PostgreSQL;
+- runtime: Docker + Docker Compose.
 
-- host: `docker-home`;
-- user used by deploy runner: `leo`;
-- runtime: Docker + Docker Compose;
-- dedicated repository runner: `docker-home-habit-tracker`;
-- runner installation: `/home/leo/actions-runner-habit-tracker/actions-runner`.
+## 4. Production Compose topology
 
-The Habit Tracker runner is separate from the Genealogy runner.
+Compose project:
 
-## 4. Target application runtime
+- `habit_tracker_prod`.
 
-Approved direction:
+Containers:
 
-- mobile-first Web/PWA;
-- React + TypeScript frontend;
-- backend API;
-- PostgreSQL as server-side source of truth;
-- Docker-based production runtime;
-- reverse proxy / HTTPS once a domain is assigned;
-- local PWA cache for fast startup and offline fallback only.
+- `habit_tracker_prod_app`;
+- `habit_tracker_prod_postgres`.
 
-Exact backend framework and final Compose topology will be chosen during implementation of the new application.
+Network:
 
-## 5. Deployment isolation
+- `habit_tracker_internal`.
 
-Habit Tracker must have its own:
+App image:
 
-- production checkout;
+- `habit-tracker-app:prod`;
+- temporary rollback image: `habit-tracker-app:rollback`.
+
+PostgreSQL не имеет host port. Application публикуется только на localhost:
+
+`127.0.0.1:<HOST_PORT> → app:3000`
+
+## 5. Isolation
+
+Habit Tracker имеет отдельные:
+
+- checkout;
 - containers;
-- PostgreSQL instance/data;
-- environment file;
-- backup path;
+- Docker network;
+- PostgreSQL instance;
+- persistent data directory;
+- backup directory;
+- `.env.production`;
 - health endpoints;
-- public route/domain.
+- будущий public route/domain.
 
-Normal Habit Tracker deployment must not restart, recreate or modify Genealogy or other project containers.
+Normal deploy не должен restart/recreate другие project containers.
 
-## 6. Production safety state
+## 6. Server baseline
 
-Real deployment is currently locked by the absence of:
+Read-only inspection на `docker-home` 11 сентября 2026 подтвердила:
+
+- Habit Tracker checkout существует;
+- existing host listeners: 3000, 3001, 3010, 5173, 8081, 8082, 9000, 9443;
+- 3011 в момент проверки был свободен;
+- `/opt/data` используется другими сервисами, но Habit Tracker data directory ещё не создан;
+- `/opt/backups` содержит Genealogy backups, но Habit Tracker backup directory ещё не создан;
+- root filesystem: около 38 GB total, около 6.5 GB free, ~82% used.
+
+Из-за заполнения root filesystem production PostgreSQL и backups нельзя размещать до проверки реальных block devices/mounts и выбора storage.
+
+## 7. Persistent data
+
+Compose требует абсолютный `POSTGRES_DATA_DIR`.
+
+Deploy script намеренно не создаёт этот directory. Он должен быть подготовлен отдельно после выбора физического storage и проверен как writable пользователем deploy runner.
+
+PostgreSQL volume монтируется:
+
+`POSTGRES_DATA_DIR → /var/lib/postgresql/data`
+
+Normal deploy никогда не выполняет `docker compose down -v` и не удаляет persistent database directory.
+
+## 8. Backup storage
+
+Production config требует `POSTGRES_BACKUP_DIR`.
+
+Backup format:
+
+- PostgreSQL custom format (`pg_dump -Fc`);
+- SHA-256 sidecar checksum;
+- disposable restore verification before deploy.
+
+Автоматическое удаление backup выключено по умолчанию. Retention включается только явным `BACKUP_RETENTION_DAYS`.
+
+Физический backup storage ещё должен быть выбран и подтверждён.
+
+## 9. Production safety gate
+
+Activation file:
 
 `/opt/stacks/habit-tracker/.prod-enabled`
 
-The CI/CD wiring may run and validate the runner, but it cannot publish the legacy prototype or mutate the production stack while this lock remains absent.
+Пока его нет, deploy workflow может проверить runner wiring, но production stack не меняется.
 
-## 7. Data and backups
+Создание activation file считается отдельным production action после готовности storage/secrets/backup/route.
 
-The future PostgreSQL database will be the server-side source of truth. Persistent storage paths, backup storage and retention are not fixed yet and must be selected before enabling real production deployment.
+## 10. Health and monitoring
 
-Required before real users/data:
+Implemented health endpoint:
 
-- automatic PostgreSQL backup;
-- backup verification;
-- retention policy;
-- restore procedure;
-- periodic restore test;
-- no public PostgreSQL exposure.
+- `/api/health` проверяет application и PostgreSQL availability.
 
-## 8. Public access
+Deploy checks:
 
-A dedicated production domain and HTTPS route will be assigned later.
+- Docker health PostgreSQL;
+- Docker health app;
+- private localhost HTTP health;
+- optional public HTTPS health.
 
-Until the new application and proxy route are ready, no production domain should be invented or documented as active.
+Target monitoring после activation:
 
-## 9. Monitoring
-
-Minimum target monitoring:
-
-- frontend availability;
-- backend health;
-- database health;
+- public availability;
+- backend/database health;
 - backup freshness;
-- disk/storage usage;
+- disk usage;
 - application errors.
 
-## 10. Next infrastructure decisions
+## 11. Public access
 
-Before unlocking production deployment confirm:
+Dedicated production domain пока не назначен.
 
-- backend framework;
-- final Docker Compose services and ports;
-- database/storage paths;
-- backup path and retention;
-- domain/reverse proxy route;
-- health endpoints;
-- production secrets/session configuration;
-- monitoring target.
+После выбора domain нужен reverse proxy/HTTPS route на выбранный localhost `HOST_PORT`, после чего URL фиксируется как `PUBLIC_HEALTH_URL`.
+
+## 12. Open infrastructure decisions
+
+До PROD activation требуется:
+
+- проверить реальные block devices/mounts на `docker-home`;
+- выбрать `POSTGRES_DATA_DIR`;
+- выбрать `POSTGRES_BACKUP_DIR` желательно с учётом отказа основного storage;
+- определить retention policy или оставить ручное хранение;
+- создать server-only `.env.production`;
+- повторно проверить host port;
+- назначить domain и HTTPS route;
+- подключить monitoring/backup freshness alert.

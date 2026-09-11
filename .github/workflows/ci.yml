@@ -33,6 +33,24 @@ jobs:
           test -f DEPLOYMENT.md
           test -f INFRASTRUCTURE.md
 
+      - name: Validate operations shell syntax
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/deploy-prod.sh
+          bash -n scripts/backup-postgres.sh
+          bash -n scripts/verify-backup-restore.sh
+
+      - name: Verify production safety lock
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          target_sha="$(git rev-parse HEAD)"
+          output="$(TARGET_SHA="$target_sha" SOURCE_DIR="$GITHUB_WORKSPACE" PROD_DIR="$GITHUB_WORKSPACE" PROD_LOCK_FILE="$RUNNER_TEMP/nonexistent-prod-lock" bash scripts/deploy-prod.sh)"
+          echo "$output"
+          grep -q '^PROD_LOCKED:' <<< "$output"
+          test ! -e "$RUNNER_TEMP/nonexistent-prod-lock"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -150,3 +168,99 @@ jobs:
           if [[ -f /tmp/habit-tracker.pid ]]; then
             kill "$(cat /tmp/habit-tracker.pid)" 2>/dev/null || true
           fi
+
+  production-stack-smoke:
+    name: Production Compose, backup and restore smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: quality
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare isolated production-like environment
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          DATA_DIR="$RUNNER_TEMP/habit-tracker-postgres"
+          BACKUP_DIR="$RUNNER_TEMP/habit-tracker-backups"
+          mkdir -p "$DATA_DIR" "$BACKUP_DIR"
+          cat > .env.ci-production <<EOF
+          POSTGRES_DB=habit_tracker_ci_prod
+          POSTGRES_USER=habit_tracker_ci_prod
+          POSTGRES_PASSWORD=ci-compose-postgres-password
+          POSTGRES_DATA_DIR=$DATA_DIR
+          POSTGRES_BACKUP_DIR=$BACKUP_DIR
+          SESSION_SECRET=ci-compose-session-secret-0123456789abcdef
+          HOST_PORT=3199
+          COOKIE_SECURE=false
+          TRUST_PROXY=false
+          EOF
+          docker compose --env-file .env.ci-production -f docker-compose.prod.yml config --quiet
+
+      - name: Build application image
+        run: docker compose --env-file .env.ci-production -f docker-compose.prod.yml build app
+
+      - name: Start PostgreSQL and migrate
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker compose --env-file .env.ci-production -f docker-compose.prod.yml up -d postgres
+          for i in {1..30}; do
+            status="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{end}}' habit_tracker_prod_postgres 2>/dev/null || true)"
+            [[ "$status" == "healthy" ]] && break
+            sleep 1
+          done
+          [[ "$(docker inspect -f '{{.State.Health.Status}}' habit_tracker_prod_postgres)" == "healthy" ]]
+          docker compose --env-file .env.ci-production -f docker-compose.prod.yml run --rm --no-deps app node dist/migrate.cjs
+
+      - name: Create account and start app
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          docker compose --env-file .env.ci-production -f docker-compose.prod.yml run --rm --no-deps \
+            -e ADMIN_LOGIN=ci-admin -e ADMIN_PASSWORD='CI-only-Strong-Password-123!' -e ADMIN_DISPLAY_NAME='CI Admin' \
+            app node dist/create-admin.cjs
+          docker compose --env-file .env.ci-production -f docker-compose.prod.yml up -d --no-deps app
+          for i in {1..45}; do
+            if curl -fsS http://127.0.0.1:3199/api/health | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker compose --env-file .env.ci-production -f docker-compose.prod.yml logs app
+          exit 1
+
+      - name: Exercise API before backup
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          curl -fsS -c /tmp/prod-cookies.txt \
+            -H 'Content-Type: application/json' \
+            -d '{"login":"ci-admin","password":"CI-only-Strong-Password-123!"}' \
+            http://127.0.0.1:3199/api/auth/login | grep -q '"login":"ci-admin"'
+          curl -fsS -b /tmp/prod-cookies.txt \
+            -H 'Content-Type: application/json' \
+            -d '{"title":"CI walk","emoji":"🚶","type":"duration","color":"lime","target":20,"unit":"мин","startDate":"2026-09-11"}' \
+            http://127.0.0.1:3199/api/habits | grep -q '"title":"CI walk"'
+
+      - name: Create and restore-verify backup
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          output="$(PROD_DIR="$GITHUB_WORKSPACE" ENV_FILE="$GITHUB_WORKSPACE/.env.ci-production" COMPOSE_FILE="$GITHUB_WORKSPACE/docker-compose.prod.yml" bash scripts/backup-postgres.sh)"
+          echo "$output"
+          backup_file="${output#BACKUP_OK }"
+          test -s "$backup_file"
+          test -s "$backup_file.sha256"
+          PROD_DIR="$GITHUB_WORKSPACE" ENV_FILE="$GITHUB_WORKSPACE/.env.ci-production" COMPOSE_FILE="$GITHUB_WORKSPACE/docker-compose.prod.yml" BACKUP_FILE="$backup_file" \
+            bash scripts/verify-backup-restore.sh
+
+      - name: Show Compose logs on failure
+        if: failure()
+        run: docker compose --env-file .env.ci-production -f docker-compose.prod.yml logs || true
+
+      - name: Stop isolated stack
+        if: always()
+        run: docker compose --env-file .env.ci-production -f docker-compose.prod.yml down --remove-orphans || true

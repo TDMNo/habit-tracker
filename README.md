@@ -2,12 +2,15 @@
 
 Mobile-first PWA для ежедневных повторяющихся привычек.
 
-Текущий этап — мобильная React + TypeScript основа и рабочий экран «Сегодня». Серверная синхронизация, аккаунты, статистика и социальные функции добавляются следующими этапами в соответствии с `PROJECT_INSTRUCTIONS.md` и `ARCHITECTURE.md`.
+Текущая версия уже использует React + TypeScript frontend, Node/Express API и PostgreSQL. Реализованы серверные сессии, история привычек по датам, per-user cache и фоновая синхронизация дневных значений. Production остаётся закрыт safety-lock до подготовки реального storage/backup окружения на `docker-home`.
 
-## Запуск
+## Локальный запуск
+
+Нужен PostgreSQL и переменные окружения по примеру `.env.example`.
 
 ```bash
 npm install
+npm run db:migrate
 npm run dev
 ```
 
@@ -15,12 +18,27 @@ npm run dev
 
 ```bash
 npm run typecheck
+npm test
 npm run build
 ```
+
+CI дополнительно проверяет migrations, auth/API и production-like Docker Compose stack с созданием и тестовым восстановлением PostgreSQL backup.
+
+## Production
+
+- host: `docker-home`;
+- checkout: `/opt/stacks/habit-tracker`;
+- Compose: `docker-compose.prod.yml`;
+- real environment: `.env.production` только на сервере;
+- activation gate: `/opt/stacks/habit-tracker/.prod-enabled`;
+- deploy: GitHub `main` → CI → self-hosted runner → `scripts/deploy-prod.sh`.
+
+Пока activation gate отсутствует, pipeline не меняет production runtime.
 
 ## Документация
 
 - `PROJECT_INSTRUCTIONS.md` — продуктовые правила и утверждённые решения.
-- `ARCHITECTURE.md` — целевая архитектура.
-- `INFRASTRUCTURE.md` — целевая инфраструктура.
-- `DEPLOYMENT.md` — схема будущего production deployment.
+- `ARCHITECTURE.md` — текущая архитектура и sync model.
+- `INFRASTRUCTURE.md` — сервер и production topology.
+- `DEPLOYMENT.md` — CI/CD, backup, health-check и rollback.
+- `ROADMAP.md` — состояние этапов разработки.
