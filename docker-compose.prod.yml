@@ -1,3 +1,5 @@
+name: habit_tracker_prod
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -18,11 +20,13 @@ services:
       - habit_tracker_internal
 
   app:
+    image: habit-tracker-app:prod
     build:
       context: .
       dockerfile: Dockerfile
     container_name: habit_tracker_prod_app
     restart: unless-stopped
+    init: true
     depends_on:
       postgres:
         condition: service_healthy
@@ -46,6 +50,10 @@ services:
       timeout: 5s
       retries: 12
       start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     networks:
       - habit_tracker_internal
 
