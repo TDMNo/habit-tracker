@@ -13,14 +13,17 @@ button { -webkit-tap-highlight-color: transparent; }
 .app-shell { width: min(100%, 720px); min-height: 100vh; margin: 0 auto; padding: max(22px, env(safe-area-inset-top)) 18px max(28px, env(safe-area-inset-bottom)); }
 .topbar, .section-heading, .habit-card, .summary-card { display: flex; align-items: center; }
 .topbar { justify-content: space-between; margin-bottom: 22px; }
-.eyebrow { margin: 0 0 3px; color: #979d90; font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+.eyebrow-row { display: flex; align-items: center; gap: 10px; margin-bottom: 3px; }
+.eyebrow { margin: 0; color: #979d90; font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; }
+.today-link { padding: 4px 8px; border: 1px solid #3a4136; border-radius: 999px; color: #b7f45c; background: transparent; font-size: .72rem; font-weight: 700; }
 h1 { margin: 0; font-size: clamp(1.65rem, 8vw, 2.35rem); line-height: 1.05; letter-spacing: -.04em; }
 .avatar { display: grid; place-items: center; width: 46px; height: 46px; border: 1px solid #343b30; border-radius: 50%; color: #17200e; background: #b7f45c; font-weight: 850; font-size: 1.05rem; }
 .week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 0 -2px 20px; }
-.day { min-width: 0; padding: 9px 2px; border-radius: 16px; color: #81877c; text-align: center; }
+.day { min-width: 0; padding: 9px 2px; border: 0; border-radius: 16px; color: #81877c; background: transparent; text-align: center; cursor: pointer; }
 .day span, .day strong { display: block; }
 .day span { margin-bottom: 7px; font-size: .7rem; text-transform: uppercase; }
 .day strong { font-size: 1rem; }
+.day.today:not(.active) strong { color: #b7f45c; }
 .day.active { color: #18200f; background: #b7f45c; box-shadow: 0 9px 25px rgba(183, 244, 92, .16); }
 .summary-card { gap: 18px; padding: 18px; border: 1px solid #30352d; border-radius: 28px; background: linear-gradient(145deg, #20251e, #181c17); box-shadow: 0 20px 60px rgba(0, 0, 0, .22); }
 .progress-ring { --progress: 0deg; display: grid; place-items: center; flex: 0 0 92px; width: 92px; height: 92px; border-radius: 50%; background: conic-gradient(#b7f45c var(--progress), #343a30 0); position: relative; }
