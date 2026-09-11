@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: backend-lockfile
+  cancel-in-progress: true
+
 jobs:
   lockfile:
     runs-on: ubuntu-latest
@@ -16,10 +20,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feature/backend-foundation
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
       - name: Refresh package-lock.json
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
       - name: Commit lockfile when changed
@@ -33,4 +37,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json
           git commit -m "build: refresh backend dependency lockfile"
+          git pull --rebase origin feature/backend-foundation
           git push origin HEAD:feature/backend-foundation
