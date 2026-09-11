@@ -37,9 +37,22 @@ export interface PendingHabit {
   createdAt: string
 }
 
+export interface PendingHabitChange {
+  habitId: string
+  title: string
+  emoji: string
+  color: HabitColor
+  target: number
+  unit: string
+  effectiveDate: string
+  archivedOn?: string
+  updatedAt: string
+}
+
 export interface TrackerState {
-  version: 4
+  version: 5
   days: Record<string, DayCache>
   pendingEntries: Record<string, Record<string, number>>
   pendingHabits: Record<string, PendingHabit>
+  pendingHabitChanges: Record<string, PendingHabitChange>
 }

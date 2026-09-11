@@ -33,6 +33,51 @@
   vertical-align: 2px;
 }
 
+.edit-button {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  color: #92998d;
+  background: transparent;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.edit-button:active { background: #282e25; }
+
+.sheet-note {
+  margin: -8px 0 18px;
+  color: #92998d;
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.sheet-error {
+  margin: 0 0 14px;
+  padding: 9px 11px;
+  border: 1px solid rgba(236, 142, 130, .3);
+  border-radius: 13px;
+  color: #f3b4ac;
+  background: rgba(104, 43, 37, .22);
+  font-size: .78rem;
+}
+
+.target-field { margin-top: 16px; }
+
+.archive-button {
+  width: 100%;
+  min-height: 49px;
+  margin-top: 10px;
+  border: 1px solid #493733;
+  border-radius: 16px;
+  color: #e6a299;
+  background: rgba(89, 42, 36, .14);
+  font-weight: 750;
+}
+
 .action-error {
   margin: 14px 0 -12px;
   padding: 10px 12px;

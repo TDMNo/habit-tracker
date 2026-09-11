@@ -88,6 +88,31 @@ export async function createHabit(input: {
   return habit
 }
 
+export async function updateHabitDefinition(habitId: string, input: {
+  title: string
+  emoji: string
+  color: HabitColor
+}): Promise<void> {
+  await request(`/api/habits/${encodeURIComponent(habitId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
+}
+
+export async function saveHabitTarget(habitId: string, effectiveFrom: string, target: number, unit: string): Promise<void> {
+  await request(`/api/habits/${encodeURIComponent(habitId)}/target`, {
+    method: 'PUT',
+    body: JSON.stringify({ effectiveFrom, target, unit }),
+  })
+}
+
+export async function archiveHabit(habitId: string, archivedOn: string): Promise<void> {
+  await request(`/api/habits/${encodeURIComponent(habitId)}/archive`, {
+    method: 'PUT',
+    body: JSON.stringify({ archivedOn }),
+  })
+}
+
 export async function saveHabitEntry(habitId: string, date: string, value: number): Promise<void> {
   await request(`/api/habits/${encodeURIComponent(habitId)}/entries/${encodeURIComponent(date)}`, {
     method: 'PUT',
