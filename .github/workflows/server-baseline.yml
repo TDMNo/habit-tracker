@@ -1,0 +1,62 @@
+name: Habit Tracker Server Baseline
+
+on:
+  push:
+    branches:
+      - ops/server-baseline
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+    timeout-minutes: 10
+    steps:
+      - name: Validate host
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(hostname)" = "docker-home"
+          test "$(whoami)" = "leo"
+          docker version >/dev/null
+          docker compose version >/dev/null
+
+      - name: Read-only server baseline
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          echo '=== HOST ==='
+          hostname
+          uname -a
+          echo
+          echo '=== DISK ==='
+          df -h / /opt || true
+          echo
+          echo '=== LISTENING TCP ==='
+          ss -ltnH || true
+          echo
+          echo '=== RUNNING CONTAINERS ==='
+          docker ps --format 'table {{.Names}}\t{{.Ports}}\t{{.Status}}'
+          echo
+          echo '=== DOCKER NETWORKS ==='
+          docker network ls
+          echo
+          echo '=== STACK ROOTS ==='
+          find /opt/stacks -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort
+          echo
+          echo '=== DATA ROOTS ==='
+          if [[ -d /opt/data ]]; then find /opt/data -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort; fi
+          echo
+          echo '=== BACKUP ROOTS ==='
+          if [[ -d /opt/backups ]]; then find /opt/backups -mindepth 1 -maxdepth 1 -type d -printf '%f\n' | sort; fi
+          echo
+          echo '=== HABIT TRACKER CHECKOUT ==='
+          git -C /opt/stacks/habit-tracker status --short --branch
+          git -C /opt/stacks/habit-tracker rev-parse HEAD
+          git -C /opt/stacks/habit-tracker remote get-url origin
+          echo
+          echo 'SERVER_BASELINE_OK'
