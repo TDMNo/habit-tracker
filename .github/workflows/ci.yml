@@ -41,6 +41,16 @@ jobs:
           bash -n scripts/backup-postgres.sh
           bash -n scripts/verify-backup-restore.sh
 
+      - name: Verify production safety lock
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          target_sha="$(git rev-parse HEAD)"
+          output="$(TARGET_SHA="$target_sha" SOURCE_DIR="$GITHUB_WORKSPACE" PROD_DIR="$GITHUB_WORKSPACE" PROD_LOCK_FILE="$RUNNER_TEMP/nonexistent-prod-lock" bash scripts/deploy-prod.sh)"
+          echo "$output"
+          grep -q '^PROD_LOCKED:' <<< "$output"
+          test ! -e "$RUNNER_TEMP/nonexistent-prod-lock"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
