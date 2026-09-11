@@ -16,6 +16,23 @@
 .sync-status.offline { color: #e4b46c; }
 .sync-status.error { color: #ec8e82; }
 
+.habit-card.pending {
+  border-style: dashed;
+}
+
+.pending-badge {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: #d8ad70;
+  background: rgba(228, 180, 108, .12);
+  font-size: .62rem;
+  font-style: normal;
+  font-weight: 700;
+  vertical-align: 2px;
+}
+
 .action-error {
   margin: 14px 0 -12px;
   padding: 10px 12px;
