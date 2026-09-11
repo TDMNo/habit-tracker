@@ -1,115 +1,17 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Трекер Привычек</title>
-  
-  <!-- PWA Манифест -->
-  <link rel="manifest" href="manifest.json">
-  
-  <!-- PWA мета теги -->
-  <meta name="theme-color" content="#00ff9c">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Трекер Привычек">
-  
-  <!-- Иконки для iOS -->
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
-  
-  <!-- Подключение стилей -->
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="container">
-    <!-- PWA Install Prompt -->
-    <div id="install-prompt" class="install-prompt">
-      📱 Добавить на главный экран
-    </div>
-
-    <!-- 👤 Выбор или ввод участника -->
-    <h1>Трекер Привычек</h1>
-
-    <div class="user-controls">
-      <div>
-        <label for="user-select">Профиль:</label>
-        <select id="user-select"></select>
-        <button id="delete-user" class="neon-trash" title="Удалить участника">🗑️</button>
-      </div>
-      
-      <div>
-        <label for="new-user">Новое имя:</label>
-        <input type="text" id="new-user" placeholder="Введите имя" />
-        <button id="set-user" class="neon-plus">+</button>
-      </div>
-    </div>
-
-    <h2 id="username-title">Участник не выбран</h2>
-
-    <div class="swipe-indicator">
-      📱 Потяните кружки влево-вправо для переключения дат
-    </div>
-
-    <!-- 🏠 Кнопка возврата к сегодня -->
-    <div class="today-button-container">
-      <button id="today-btn" class="today-button" title="Вернуться к сегодняшней дате">📅 Сегодня</button>
-    </div>
-
-    <!-- 📋 Таблица -->
-    <div class="table-container">
-      <table id="habit-table">
-        <thead>
-          <tr>
-            <th class="delete-col">🗑</th>
-            <th class="name-col">Привычка</th>
-            <th id="date-th-1" class="date-th">дата1</th>
-            <th id="date-th-2" class="date-th">дата2</th>
-            <th id="date-th-3" class="date-th">дата3</th>
-            <th class="progress-col">Прогресс</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-
-    <!-- ➕ Добавление привычки -->
-    <div class="add-habit">
-      <input type="text" id="new-habit" placeholder="Новая привычка" maxlength="50" />
-      <button id="add-btn" class="neon-plus">+</button>
-    </div>
-
-    <!-- 📊 Кнопка статистики -->
-    <div class="stats-button-container">
-      <button id="stats-btn" class="stats-button" title="Открыть статистику">
-        📊 Статистика
-      </button>
-    </div>
-
-    <!-- 📈 Панель статистики -->
-    <div id="stats-panel" class="stats-panel hidden">
-      <h3>📈 Статистика по месяцам</h3>
-      <div class="month-selector">
-        <label for="month-select">Выберите месяц:</label>
-        <select id="month-select"></select>
-      </div>
-      <div id="stats-content" class="stats-content">
-        <p>Выберите месяц для просмотра статистики</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- 🧼 Модалка подтверждения удаления -->
-  <div id="confirm-modal" class="modal hidden">
-    <div class="modal-content">
-      <p id="confirm-text">Удалить?</p>
-      <div class="modal-buttons">
-        <button id="confirm-yes" class="confirm-btn">ОК</button>
-        <button id="confirm-no" class="confirm-btn cancel">Отмена</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#10130f" />
+    <meta name="description" content="Быстрый мобильный трекер ежедневных привычек" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <title>Трекер привычек</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
