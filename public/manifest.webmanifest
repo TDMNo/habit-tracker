@@ -1,0 +1,12 @@
+{
+  "name": "Трекер привычек",
+  "short_name": "Привычки",
+  "description": "Быстрый мобильный трекер ежедневных привычек",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#10130f",
+  "theme_color": "#10130f",
+  "orientation": "portrait-primary",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
