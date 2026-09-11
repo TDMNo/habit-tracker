@@ -15,14 +15,16 @@ Habit Tracker переведён со старого Vanilla JS прототип
 - habit/entry/target API;
 - per-user client cache;
 - background refresh и optimistic entry updates;
-- durable pending-entry queue для offline/temporary network failure;
+- durable pending-entry queue;
+- durable pending-habit queue для создания привычек без сети;
+- idempotent server-side habit creation по client-generated UUID;
 - Docker production runtime foundation.
 
 ## 2. Основная схема
 
 ```text
 PWA / Web client
- ↓ cached screen + sync layer
+ ↓ cached screen + durable sync queues
 React + TypeScript
  ↓ JSON API / session cookie
 Node 22 + Express
@@ -30,29 +32,30 @@ Node 22 + Express
 PostgreSQL
 ```
 
-PostgreSQL/сервер — source of truth. Клиентский storage используется только как быстрый per-user cache, offline fallback и очередь ещё не синхронизированных действий.
+PostgreSQL/сервер — source of truth. Клиентский storage используется как быстрый per-user cache, offline fallback и очередь ещё не синхронизированных действий.
 
 ## 3. Быстрый старт и синхронизация
 
-Целевой сценарий уже заложен в клиент:
+Клиент работает по схеме:
 
 ```text
 launch
 → cached user/day immediately when available
 → validate server session in background
+→ flush pending habit definitions
+→ flush pending day entries
 → refresh selected day
-→ optimistic local entry change
-→ queue pending value
-→ sequential background sync
 ```
 
-Очередь хранится отдельно для каждого пользователя. Это не позволяет данным разных аккаунтов смешиваться на одном браузере.
+Любое изменение дневного значения сначала применяется локально, затем ставится в очередь и последовательно отправляется на сервер.
 
-Pending values накладываются поверх server refresh, поэтому медленный ответ сервера не должен затереть ещё не отправленное действие пользователя.
+Новая привычка также создаётся локально сразу. Клиент генерирует UUID, сохраняет определение в `pendingHabits` и показывает его в Today screen даже без сети. После восстановления соединения тот же UUID отправляется на сервер.
 
-Записи синхронизируются последовательно. Это защищает от race condition при быстрых повторных нажатиях `+/-`, когда более старый запрос мог бы прийти позже нового.
+Server POST создания привычки идемпотентен для одного пользователя: повтор той же операции с тем же UUID и теми же полями возвращает уже созданную привычку вместо дубля. Если тот же UUID используется с другими данными или другим владельцем, сервер отвечает конфликтом.
 
-При потере сети доступен последний cached day. Изменения существующих привычек сохраняются локально и отправляются после восстановления соединения. Создание новой привычки пока требует серверного соединения.
+Pending habit definitions синхронизируются раньше pending entries. Поэтому пользователь может офлайн создать новую привычку и сразу отметить её выполнение: после reconnect сначала создаётся Habit, потом отправляется HabitEntry.
+
+Очереди и кеш хранятся отдельно для каждого пользователя. Server refresh накладывает локальные pending values/definitions поверх ответа сервера, поэтому медленный ответ не должен затереть ещё не отправленное действие.
 
 ## 4. Backend
 
@@ -61,6 +64,7 @@ Backend отвечает за:
 - `/api/health`;
 - session auth;
 - доступ к пользовательским привычкам;
+- idempotent habit creation;
 - выполнение по конкретным датам;
 - историю целей привычки;
 - ownership checks.
@@ -78,6 +82,12 @@ Server-side основа:
 - `user_sessions` — server-side sessions.
 
 Изменение цели, например 10 → 20 → 30 минут, не переписывает старую статистику.
+
+Client-side временное состояние дополнительно содержит:
+
+- cached days;
+- `pendingHabits`;
+- `pendingEntries`.
 
 Позже добавляются Friendship, Group / GroupMember, Achievement и MonthlyScore.
 
@@ -148,7 +158,7 @@ SQL migrations лежат в `migrations/` и применяются отдел�
 
 PostgreSQL наружу не публикуется. Application bind происходит только на localhost host-порту для последующего reverse proxy.
 
-Конкретные production port, persistent data path, backup path, secrets и domain фиксируются только после проверки реального состояния `docker-home`.
+Production deploy использует safety lock, backup/restore verification, migrations, health checks и application-image rollback. Persistent storage, secrets и public route выбираются только после проверки реального состояния `docker-home`.
 
 ## 12. Изменение архитектуры
 

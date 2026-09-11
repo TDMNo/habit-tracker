@@ -3,7 +3,7 @@ import { ApiError, createHabit as createServerHabit, fetchDay, getSessionUser, l
 import { daysAround, localDateKey, parseLocalDateKey } from './date'
 import { LoginScreen } from './LoginScreen'
 import { blankState, clearCachedUser, loadCachedUser, loadState, saveCachedUser, saveState } from './storage'
-import type { Habit, HabitEntry, HabitType, SessionUser, TrackerState } from './types'
+import type { Habit, HabitEntry, HabitType, PendingHabit, SessionUser, TrackerState } from './types'
 
 type AuthMode = 'checking' | 'authenticated' | 'offline' | 'guest' | 'unavailable'
 type SyncStatus = 'idle' | 'syncing' | 'synced' | 'offline' | 'error'
@@ -11,6 +11,18 @@ type SyncStatus = 'idle' | 'syncing' | 'synced' | 'offline' | 'error'
 function completion(habit: Habit, value: number): number {
   if (habit.target <= 0) return 0
   return Math.min(Math.max(value, 0) / habit.target, 1)
+}
+
+function hasPendingEntries(state: TrackerState): boolean {
+  return Object.values(state.pendingEntries).some((day) => Object.keys(day).length > 0)
+}
+
+function mergeHabits(serverHabits: Habit[], pendingHabits: PendingHabit[], date: string): Habit[] {
+  const byId = new Map(serverHabits.map((habit) => [habit.id, habit]))
+  for (const pending of pendingHabits) {
+    if (pending.startDate <= date && !byId.has(pending.habit.id)) byId.set(pending.habit.id, pending.habit)
+  }
+  return [...byId.values()]
 }
 
 function App() {
@@ -25,7 +37,6 @@ function App() {
   const [isAdding, setIsAdding] = useState(false)
   const [title, setTitle] = useState('')
   const [type, setType] = useState<HabitType>('binary')
-  const [savingHabit, setSavingHabit] = useState(false)
 
   const userRef = useRef<SessionUser | null>(initialUser)
   const stateRef = useRef(state)
@@ -36,7 +47,11 @@ function App() {
   const selectedDateObject = useMemo(() => parseLocalDateKey(selectedDate), [selectedDate])
   const isToday = selectedDate === localDateKey()
   const day = state.days[selectedDate]
-  const habits = day?.habits ?? []
+  const pendingHabitList = useMemo(() => Object.values(state.pendingHabits), [state.pendingHabits])
+  const habits = useMemo(
+    () => mergeHabits(day?.habits ?? [], pendingHabitList, selectedDate),
+    [day?.habits, pendingHabitList, selectedDate],
+  )
 
   useEffect(() => { stateRef.current = state }, [state])
   useEffect(() => { userRef.current = user }, [user])
@@ -103,23 +118,27 @@ function App() {
     setSyncStatus('syncing')
     try {
       const remote = await fetchDay(date)
-      const pending = stateRef.current.pendingEntries[date] ?? {}
+      const current = stateRef.current
+      const pendingEntries = current.pendingEntries[date] ?? {}
+      const mergedHabits = mergeHabits(remote.habits, Object.values(current.pendingHabits), date)
       const now = new Date().toISOString()
       const entries: Record<string, HabitEntry> = {}
 
-      for (const habit of remote.habits) {
-        const value = Object.hasOwn(pending, habit.id) ? pending[habit.id] : (remote.values[habit.id] ?? 0)
+      for (const habit of mergedHabits) {
+        const value = Object.hasOwn(pendingEntries, habit.id)
+          ? pendingEntries[habit.id]
+          : (remote.values[habit.id] ?? 0)
         if (value > 0) entries[habit.id] = { habitId: habit.id, date, value, updatedAt: now }
       }
 
-      updateState((current) => ({
-        ...current,
+      const next = updateState((latest) => ({
+        ...latest,
         days: {
-          ...current.days,
-          [date]: { habits: remote.habits, entries, syncedAt: now },
+          ...latest.days,
+          [date]: { habits: mergedHabits, entries, syncedAt: now },
         },
       }))
-      setSyncStatus(Object.keys(pending).length ? 'syncing' : 'synced')
+      setSyncStatus(Object.keys(next.pendingHabits).length || hasPendingEntries(next) ? 'syncing' : 'synced')
       setActionError('')
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) clearIdentity('guest')
@@ -134,18 +153,64 @@ function App() {
     }
   }, [clearIdentity, updateState])
 
-  const flushPendingEntries = useCallback(async () => {
+  const flushSyncQueue = useCallback(async () => {
     if (flushingRef.current || authRef.current !== 'authenticated' || !userRef.current) return
     flushingRef.current = true
     setSyncStatus('syncing')
 
     try {
       while (authRef.current === 'authenticated') {
-        const pending = stateRef.current.pendingEntries
-        const date = Object.keys(pending).find((key) => Object.keys(pending[key] ?? {}).length > 0)
+        const pendingHabit = Object.values(stateRef.current.pendingHabits)[0]
+        if (pendingHabit) {
+          try {
+            const canonical = await createServerHabit({
+              id: pendingHabit.habit.id,
+              title: pendingHabit.habit.title,
+              emoji: pendingHabit.habit.emoji,
+              type: pendingHabit.habit.type,
+              color: pendingHabit.habit.color,
+              target: pendingHabit.habit.target,
+              unit: pendingHabit.habit.unit,
+              startDate: pendingHabit.startDate,
+            })
+
+            updateState((current) => {
+              if (!current.pendingHabits[pendingHabit.habit.id]) return current
+              const pendingHabits = { ...current.pendingHabits }
+              delete pendingHabits[pendingHabit.habit.id]
+
+              const days = { ...current.days }
+              for (const [date, cache] of Object.entries(days)) {
+                if (date < pendingHabit.startDate) continue
+                const byId = new Map(cache.habits.map((habit) => [habit.id, habit]))
+                byId.set(canonical.id, canonical)
+                days[date] = { ...cache, habits: [...byId.values()] }
+              }
+              return { ...current, days, pendingHabits }
+            })
+          } catch (error) {
+            if (error instanceof ApiError && error.status === 401) {
+              clearIdentity('guest')
+            } else if (error instanceof ApiError) {
+              setActionError(error.status === 409
+                ? 'Не удалось синхронизировать одну привычку из-за конфликта данных.'
+                : 'Не удалось синхронизировать новую привычку.')
+              setSyncStatus('error')
+            } else {
+              authRef.current = 'offline'
+              setAuthMode('offline')
+              setSyncStatus('offline')
+            }
+            return
+          }
+          continue
+        }
+
+        const pendingEntries = stateRef.current.pendingEntries
+        const date = Object.keys(pendingEntries).find((key) => Object.keys(pendingEntries[key] ?? {}).length > 0)
         if (!date) break
-        const habitId = Object.keys(pending[date])[0]
-        const value = pending[date][habitId]
+        const habitId = Object.keys(pendingEntries[date])[0]
+        const value = pendingEntries[date][habitId]
 
         try {
           await saveHabitEntry(habitId, date, value)
@@ -164,12 +229,12 @@ function App() {
 
         updateState((current) => {
           if (current.pendingEntries[date]?.[habitId] !== value) return current
-          const pendingEntries = { ...current.pendingEntries }
-          const dayPending = { ...pendingEntries[date] }
+          const nextPendingEntries = { ...current.pendingEntries }
+          const dayPending = { ...nextPendingEntries[date] }
           delete dayPending[habitId]
-          if (Object.keys(dayPending).length) pendingEntries[date] = dayPending
-          else delete pendingEntries[date]
-          return { ...current, pendingEntries }
+          if (Object.keys(dayPending).length) nextPendingEntries[date] = dayPending
+          else delete nextPendingEntries[date]
+          return { ...current, pendingEntries: nextPendingEntries }
         })
       }
       if (authRef.current === 'authenticated') setSyncStatus('synced')
@@ -180,8 +245,8 @@ function App() {
 
   useEffect(() => {
     if (authMode !== 'authenticated' || !user) return
-    void refreshDay(selectedDate).then(() => flushPendingEntries())
-  }, [authMode, flushPendingEntries, refreshDay, selectedDate, user])
+    void flushSyncQueue().then(() => refreshDay(selectedDate))
+  }, [authMode, flushSyncQueue, refreshDay, selectedDate, user])
 
   useEffect(() => {
     const reconnect = () => {
@@ -198,7 +263,7 @@ function App() {
           setUser(remoteUser)
           authRef.current = 'authenticated'
           setAuthMode('authenticated')
-          void flushPendingEntries().then(() => refreshDay(selectedDate))
+          void flushSyncQueue().then(() => refreshDay(selectedDate))
         })
         .catch(() => {
           authRef.current = 'offline'
@@ -208,7 +273,7 @@ function App() {
     }
     window.addEventListener('online', reconnect)
     return () => window.removeEventListener('online', reconnect)
-  }, [clearIdentity, flushPendingEntries, refreshDay, selectedDate])
+  }, [clearIdentity, flushSyncQueue, refreshDay, selectedDate])
 
   const handleLogin = async (loginValue: string, password: string) => {
     const nextUser = await login(loginValue, password)
@@ -251,7 +316,7 @@ function App() {
       }
     })
 
-    if (authRef.current === 'authenticated') void flushPendingEntries()
+    if (authRef.current === 'authenticated') void flushSyncQueue()
     else setSyncStatus('offline')
   }
 
@@ -267,13 +332,9 @@ function App() {
     setHabitValue(habit, valueFor(habit.id) - step)
   }
 
-  const addHabit = async () => {
+  const addHabit = () => {
     const cleanTitle = title.trim()
-    if (!cleanTitle || savingHabit) return
-    if (authRef.current !== 'authenticated') {
-      setActionError('Для создания новой привычки нужно подключение к серверу.')
-      return
-    }
+    if (!cleanTitle) return
 
     const defaults = type === 'duration'
       ? { target: 30, unit: 'мин' }
@@ -281,36 +342,40 @@ function App() {
         ? { target: 10, unit: 'раз' }
         : { target: 1, unit: '' }
 
-    setSavingHabit(true)
-    setActionError('')
-    try {
-      const habit = await createServerHabit({
-        title: cleanTitle,
-        emoji: type === 'duration' ? '⏱️' : type === 'count' ? '🎯' : '✨',
-        type,
-        color: 'lime',
-        startDate: selectedDate,
-        ...defaults,
-      })
-      updateState((current) => {
-        const currentDay = current.days[selectedDate] ?? { habits: [], entries: {} }
-        return {
-          ...current,
-          days: {
-            ...current.days,
-            [selectedDate]: { ...currentDay, habits: [...currentDay.habits, habit], syncedAt: new Date().toISOString() },
-          },
-        }
-      })
-      setTitle('')
-      setType('binary')
-      setIsAdding(false)
-    } catch (error) {
-      if (error instanceof ApiError && error.status === 401) clearIdentity('guest')
-      else setActionError('Не удалось создать привычку. Попробуй ещё раз.')
-    } finally {
-      setSavingHabit(false)
+    const habit: Habit = {
+      id: crypto.randomUUID(),
+      title: cleanTitle,
+      emoji: type === 'duration' ? '⏱️' : type === 'count' ? '🎯' : '✨',
+      type,
+      color: 'lime',
+      ...defaults,
     }
+    const createdAt = new Date().toISOString()
+
+    updateState((current) => {
+      const currentDay = current.days[selectedDate] ?? { habits: [], entries: {} }
+      const byId = new Map(currentDay.habits.map((item) => [item.id, item]))
+      byId.set(habit.id, habit)
+      return {
+        ...current,
+        days: {
+          ...current.days,
+          [selectedDate]: { ...currentDay, habits: [...byId.values()] },
+        },
+        pendingHabits: {
+          ...current.pendingHabits,
+          [habit.id]: { habit, startDate: selectedDate, createdAt },
+        },
+      }
+    })
+
+    setTitle('')
+    setType('binary')
+    setIsAdding(false)
+    setActionError('')
+
+    if (authRef.current === 'authenticated') void flushSyncQueue()
+    else setSyncStatus('offline')
   }
 
   if (!user && authMode === 'checking') {
@@ -322,13 +387,16 @@ function App() {
   }
 
   const completedCount = habits.filter((habit) => completion(habit, valueFor(habit.id)) === 1).length
+  const hasPendingWork = Object.keys(state.pendingHabits).length > 0 || hasPendingEntries(state)
   const syncLabel = syncStatus === 'syncing' || authMode === 'checking'
     ? 'Синхронизация…'
     : syncStatus === 'offline' || authMode === 'offline'
-      ? 'Офлайн'
+      ? (hasPendingWork ? 'Офлайн · изменения сохранены' : 'Офлайн')
       : syncStatus === 'error'
         ? 'Ошибка синхронизации'
-        : 'Синхронизировано'
+        : hasPendingWork
+          ? 'Ожидает синхронизации'
+          : 'Синхронизировано'
 
   return (
     <main className="app-shell">
@@ -379,11 +447,12 @@ function App() {
           {habits.map((habit) => {
             const value = valueFor(habit.id)
             const done = completion(habit, value) === 1
+            const pending = Boolean(state.pendingHabits[habit.id])
             return (
-              <article className={`habit-card ${habit.color} ${done ? 'done' : ''}`} key={habit.id}>
+              <article className={`habit-card ${habit.color} ${done ? 'done' : ''} ${pending ? 'pending' : ''}`} key={habit.id}>
                 <div className="habit-icon" aria-hidden="true">{habit.emoji}</div>
                 <button className="habit-main" type="button" onClick={() => advanceHabit(habit)}>
-                  <span className="habit-title">{habit.title}</span>
+                  <span className="habit-title">{habit.title}{pending && <em className="pending-badge">не синхр.</em>}</span>
                   <span className="habit-value">{habit.type === 'binary' ? (done ? 'Выполнено' : 'Отметить') : `${value} / ${habit.target} ${habit.unit}`}</span>
                   <span className="habit-track"><i style={{ width: `${completion(habit, value) * 100}%` }} /></span>
                 </button>
@@ -412,7 +481,7 @@ function App() {
             <h2 id="add-title">Новая привычка</h2>
             <label>
               Название
-              <input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && void addHabit()} placeholder="Например, прогулка" maxLength={80} />
+              <input autoFocus value={title} onChange={(event) => setTitle(event.target.value)} onKeyDown={(event) => event.key === 'Enter' && addHabit()} placeholder="Например, прогулка" maxLength={80} />
             </label>
             <fieldset>
               <legend>Как будем считать?</legend>
@@ -426,7 +495,7 @@ function App() {
                 ))}
               </div>
             </fieldset>
-            <button className="save-button" type="button" onClick={() => void addHabit()} disabled={savingHabit || !title.trim()}>{savingHabit ? 'Добавляем…' : 'Добавить привычку'}</button>
+            <button className="save-button" type="button" onClick={addHabit} disabled={!title.trim()}>Добавить привычку</button>
           </section>
         </div>
       )}

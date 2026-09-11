@@ -71,6 +71,7 @@ export async function fetchDay(date: string): Promise<{ habits: Habit[]; values:
 }
 
 export async function createHabit(input: {
+  id: string
   title: string
   emoji: string
   type: HabitType

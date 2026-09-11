@@ -3,26 +3,59 @@ import type { SessionUser, TrackerState } from './types'
 const USER_KEY = 'habit-tracker:cached-user:v1'
 
 function stateKey(userId: string) {
+  return `habit-tracker:user:${userId}:state:v4`
+}
+
+function previousStateKey(userId: string) {
   return `habit-tracker:user:${userId}:state:v3`
 }
 
 export function blankState(): TrackerState {
-  return { version: 3, days: {}, pendingEntries: {} }
+  return { version: 4, days: {}, pendingEntries: {}, pendingHabits: {} }
 }
 
 function isTrackerState(value: unknown): value is TrackerState {
   if (!value || typeof value !== 'object') return false
   const state = value as Partial<TrackerState>
-  return state.version === 3 && !!state.days && typeof state.days === 'object'
+  return state.version === 4 && !!state.days && typeof state.days === 'object'
     && !!state.pendingEntries && typeof state.pendingEntries === 'object'
+    && !!state.pendingHabits && typeof state.pendingHabits === 'object'
+}
+
+function migrateV3(value: unknown): TrackerState | null {
+  if (!value || typeof value !== 'object') return null
+  const state = value as {
+    version?: number
+    days?: TrackerState['days']
+    pendingEntries?: TrackerState['pendingEntries']
+  }
+  if (state.version !== 3 || !state.days || typeof state.days !== 'object'
+    || !state.pendingEntries || typeof state.pendingEntries !== 'object') return null
+
+  return {
+    version: 4,
+    days: state.days,
+    pendingEntries: state.pendingEntries,
+    pendingHabits: {},
+  }
 }
 
 export function loadState(userId: string): TrackerState {
   try {
     const saved = localStorage.getItem(stateKey(userId))
-    if (!saved) return blankState()
-    const parsed: unknown = JSON.parse(saved)
-    if (isTrackerState(parsed)) return parsed
+    if (saved) {
+      const parsed: unknown = JSON.parse(saved)
+      if (isTrackerState(parsed)) return parsed
+    }
+
+    const previous = localStorage.getItem(previousStateKey(userId))
+    if (previous) {
+      const migrated = migrateV3(JSON.parse(previous) as unknown)
+      if (migrated) {
+        saveState(userId, migrated)
+        return migrated
+      }
+    }
   } catch {
     // Corrupt or blocked cache must never prevent the app from starting.
   }
