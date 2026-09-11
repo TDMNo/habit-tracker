@@ -1,7 +1,32 @@
-import type { PendingHabitChange, TrackerState } from './types'
+import type { Habit, PendingHabitChange, TrackerState } from './types'
 
 export function pendingHabitChangeKey(change: Pick<PendingHabitChange, 'habitId' | 'effectiveDate'>): string {
   return `${change.habitId}:${change.effectiveDate}`
+}
+
+export function overlayHabitChanges(habits: Habit[], changes: PendingHabitChange[], date: string): Habit[] {
+  let current = habits
+  const ordered = [...changes].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt))
+
+  for (const change of ordered) {
+    if (change.archivedOn && date >= change.archivedOn) {
+      current = current.filter((habit) => habit.id !== change.habitId)
+      continue
+    }
+
+    current = current.map((habit) => {
+      if (habit.id !== change.habitId) return habit
+      return {
+        ...habit,
+        title: change.title,
+        emoji: change.emoji,
+        color: change.color,
+        ...(date >= change.effectiveDate ? { target: change.target, unit: change.unit } : {}),
+      }
+    })
+  }
+
+  return current
 }
 
 export function applyHabitChange(state: TrackerState, change: PendingHabitChange): TrackerState {
