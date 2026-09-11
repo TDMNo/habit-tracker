@@ -3,40 +3,49 @@ import type { SessionUser, TrackerState } from './types'
 const USER_KEY = 'habit-tracker:cached-user:v1'
 
 function stateKey(userId: string) {
+  return `habit-tracker:user:${userId}:state:v5`
+}
+
+function v4StateKey(userId: string) {
   return `habit-tracker:user:${userId}:state:v4`
 }
 
-function previousStateKey(userId: string) {
+function v3StateKey(userId: string) {
   return `habit-tracker:user:${userId}:state:v3`
 }
 
 export function blankState(): TrackerState {
-  return { version: 4, days: {}, pendingEntries: {}, pendingHabits: {} }
+  return { version: 5, days: {}, pendingEntries: {}, pendingHabits: {}, pendingHabitChanges: {} }
 }
 
 function isTrackerState(value: unknown): value is TrackerState {
   if (!value || typeof value !== 'object') return false
   const state = value as Partial<TrackerState>
-  return state.version === 4 && !!state.days && typeof state.days === 'object'
+  return state.version === 5 && !!state.days && typeof state.days === 'object'
     && !!state.pendingEntries && typeof state.pendingEntries === 'object'
     && !!state.pendingHabits && typeof state.pendingHabits === 'object'
+    && !!state.pendingHabitChanges && typeof state.pendingHabitChanges === 'object'
 }
 
-function migrateV3(value: unknown): TrackerState | null {
+function migrateLegacy(value: unknown): TrackerState | null {
   if (!value || typeof value !== 'object') return null
   const state = value as {
     version?: number
     days?: TrackerState['days']
     pendingEntries?: TrackerState['pendingEntries']
+    pendingHabits?: TrackerState['pendingHabits']
   }
-  if (state.version !== 3 || !state.days || typeof state.days !== 'object'
+  if ((state.version !== 3 && state.version !== 4) || !state.days || typeof state.days !== 'object'
     || !state.pendingEntries || typeof state.pendingEntries !== 'object') return null
 
   return {
-    version: 4,
+    version: 5,
     days: state.days,
     pendingEntries: state.pendingEntries,
-    pendingHabits: {},
+    pendingHabits: state.version === 4 && state.pendingHabits && typeof state.pendingHabits === 'object'
+      ? state.pendingHabits
+      : {},
+    pendingHabitChanges: {},
   }
 }
 
@@ -48,9 +57,10 @@ export function loadState(userId: string): TrackerState {
       if (isTrackerState(parsed)) return parsed
     }
 
-    const previous = localStorage.getItem(previousStateKey(userId))
-    if (previous) {
-      const migrated = migrateV3(JSON.parse(previous) as unknown)
+    for (const legacyKey of [v4StateKey(userId), v3StateKey(userId)]) {
+      const previous = localStorage.getItem(legacyKey)
+      if (!previous) continue
+      const migrated = migrateLegacy(JSON.parse(previous) as unknown)
       if (migrated) {
         saveState(userId, migrated)
         return migrated
