@@ -2,103 +2,195 @@
 
 ## 1. Status
 
-CI/CD bootstrap is configured, but the new Habit Tracker application is not deployed yet.
+CI/CD и production runtime реализованы, но реальный PROD всё ещё намеренно заблокирован.
 
-The repository still contains the legacy Vanilla JS prototype. Production deployment is intentionally locked so the legacy prototype cannot be published to `docker-home` by the new pipeline.
+Новая full-stack версия уже содержит React + TypeScript frontend, Node 22 + Express API, PostgreSQL, server-side sessions, migrations и Docker Compose topology.
 
-Verified on 2026-09-11:
+На `docker-home` отсутствует activation file:
 
-- dedicated repository runner is connected;
-- runner service is persistent via systemd;
-- GitHub Actions can execute a job on `docker-home` as user `leo`;
-- Docker and Docker Compose are available to the runner;
-- production checkout exists at `/opt/stacks/habit-tracker` and was clean during the smoke test.
+`/opt/stacks/habit-tracker/.prod-enabled`
 
-## 2. Current release flow
+Пока файла нет, deploy workflow завершается безопасно до любых production-изменений.
+
+## 2. Release flow
 
 ```text
 feature / PR
-→ Habit Tracker CI on GitHub-hosted runner
-→ merge/push to main
-→ Habit Tracker CI for exact main commit
+→ GitHub-hosted CI
+→ merge to main
+→ CI exact main commit
 → CI PASS
 → Habit Tracker PROD Deploy
-→ repository-scoped self-hosted runner on docker-home
+→ repository-scoped runner on docker-home
 → scripts/deploy-prod.sh
-→ production safety lock
+→ activation gate
+→ preflight
+→ verified backup when DB already exists
+→ build exact source commit
+→ PostgreSQL health
+→ migrations
+→ application update
+→ private/public health checks
+→ production checkout fast-forward
 ```
-
-While `/opt/stacks/habit-tracker/.prod-enabled` is absent, the deployment workflow exits safely without changing the running server.
 
 ## 3. CI
 
 Workflow: `.github/workflows/ci.yml`.
 
-During bootstrap it validates required project documentation. Once the modern Node application exists with `package.json` and `package-lock.json`, CI automatically runs dependency installation, available typecheck/tests and the production build.
+CI проверяет:
 
-CI must be strengthened together with the new React/API implementation rather than pretending the legacy static prototype is the final application.
+- обязательную документацию;
+- shell syntax operations scripts;
+- TypeScript typecheck;
+- unit tests;
+- production build;
+- PostgreSQL migrations;
+- initial admin bootstrap;
+- session auth;
+- habit API;
+- production-like Docker Compose build/start;
+- PostgreSQL custom-format backup;
+- checksum;
+- disposable restore verification.
 
 ## 4. Production runner
 
-Dedicated repository runner:
-
 - host: `docker-home`;
-- Linux x64;
-- runner name: `docker-home-habit-tracker`;
+- runner: `docker-home-habit-tracker`;
 - user: `leo`;
 - installation: `/home/leo/actions-runner-habit-tracker/actions-runner`;
-- production checkout: `/opt/stacks/habit-tracker`.
+- durable checkout: `/opt/stacks/habit-tracker`.
 
-The runner is scoped to `TDMNo/habit-tracker` and is not shared with Genealogy.
+Runner отдельный от Genealogy.
 
-## 5. Production activation gate
+## 5. Production configuration
 
-Deploy script: `scripts/deploy-prod.sh`.
+Real config хранится только на сервере:
 
-Before any real deployment it requires:
+`/opt/stacks/habit-tracker/.env.production`
 
-- explicit server-side activation file `.prod-enabled`;
-- modern application `package.json`;
-- `docker-compose.prod.yml`;
-- server-only `.env.production`;
-- exact CI-tested commit;
-- clean production checkout on `main`;
-- fast-forward-only deployment history.
+Template: `.env.production.example`.
 
-Even after activation, the final Docker service update logic must be implemented and reviewed together with the new application stack before production can change.
+Обязательные production values:
 
-## 6. Target production flow
+- `POSTGRES_DB`;
+- `POSTGRES_USER`;
+- `POSTGRES_PASSWORD`;
+- `POSTGRES_DATA_DIR`;
+- `POSTGRES_BACKUP_DIR`;
+- `SESSION_SECRET`;
+- `HOST_PORT`.
 
-When the new application is ready, the locked stage will be extended to:
+Optional:
 
-```text
-CI PASS
-→ backup
-→ backup verification
-→ Docker build of exact CI-tested commit
-→ migrations when required
-→ update only Habit Tracker services
-→ container health
-→ private health endpoint
-→ public HTTPS health endpoint
-→ fast-forward production checkout
-```
+- `BACKUP_RETENTION_DAYS` — если не задан, backup script ничего автоматически не удаляет;
+- `PUBLIC_HEALTH_URL` — включается после появления реального HTTPS route.
 
-Persistent PostgreSQL data must never be removed or recreated as part of a normal application deployment.
+Deploy script не создаёт persistent directories автоматически: data и backup paths должны быть заранее осознанно подготовлены и writable.
 
-## 7. PWA release checks
+## 6. Backup before deploy
 
-Production verification must include manifest correctness, service worker/cache update behavior, install/update on phone and compatibility between cached client state and the current API.
+Если production PostgreSQL уже запущен, перед build/migration выполняется:
 
-## 8. Still open before real PROD activation
+1. `pg_dump -Fc`;
+2. проверка backup через `pg_restore --list`;
+3. SHA-256 checksum;
+4. восстановление backup во временную disposable database;
+5. проверка обязательных таблиц;
+6. удаление только временной verification database.
 
-- exact backend framework and final runtime layout;
-- Docker Compose service names and ports;
-- production domain and HTTPS route;
-- production environment/secrets;
-- PostgreSQL storage path;
-- backup location and retention;
-- exact private/public health endpoints;
-- restore procedure and rollback validation.
+Scripts:
 
-These values must be based on the implemented application and actual server state, not guessed in advance.
+- `scripts/backup-postgres.sh`;
+- `scripts/verify-backup-restore.sh`.
+
+При первом deploy, когда production PostgreSQL ещё не существует, pre-deploy backup отсутствующих данных не требуется.
+
+## 7. Migrations
+
+Migrations применяются только после успешного backup/restore verification существующей БД и после healthy PostgreSQL.
+
+Применяется image exact source commit через:
+
+`node dist/migrate.cjs`.
+
+Migration runner использует ordered files, SHA-256 checksums и PostgreSQL advisory lock.
+
+Production migrations должны оставаться backward-compatible с предыдущей application version, потому что старый app container продолжает обслуживать запросы до переключения на новую версию.
+
+## 8. Application update and rollback
+
+Перед build текущий app image, если он есть, получает локальный tag:
+
+`habit-tracker-app:rollback`
+
+Новая версия собирается как:
+
+`habit-tracker-app:prod`
+
+После запуска проверяются:
+
+- Docker health;
+- `http://127.0.0.1:<HOST_PORT>/api/health`;
+- optional `PUBLIC_HEALTH_URL`.
+
+Если новая версия не становится healthy или health endpoint не проходит, deploy script возвращает предыдущий image tag и перезапускает старую application version.
+
+Автоматический rollback не откатывает уже успешно применённую migration. Поэтому destructive/non-backward-compatible migrations запрещены без отдельного migration/rollback плана.
+
+## 9. Production checkout
+
+Durable checkout `/opt/stacks/habit-tracker` обновляется `--ff-only` только после успешного runtime health-check.
+
+Deploy дополнительно проверяет:
+
+- exact CI-tested `TARGET_SHA`;
+- чистый production working tree;
+- branch `main`;
+- fast-forward history;
+- что `origin/main` всё ещё указывает на тот же `TARGET_SHA`.
+
+Это предотвращает ситуацию, когда неуспешная версия отмечается в production checkout как успешно развернутая.
+
+## 10. Docker isolation
+
+Compose project: `habit_tracker_prod`.
+
+Containers:
+
+- `habit_tracker_prod_app`;
+- `habit_tracker_prod_postgres`.
+
+Network:
+
+- `habit_tracker_internal`.
+
+PostgreSQL не публикуется наружу. App публикуется только на `127.0.0.1:<HOST_PORT>` для последующего reverse proxy.
+
+## 11. Verified server baseline
+
+Read-only baseline на `docker-home` 11 сентября 2026 показал:
+
+- existing services используют 3000, 3001, 3010, 5173, 8081, 8082, 9000 и 9443;
+- порт 3011 в момент проверки не слушался;
+- `/opt/stacks/habit-tracker` существует;
+- отдельные `/opt/data/habit-tracker` и `/opt/backups/habit-tracker` ещё не были подготовлены;
+- root filesystem был заполнен примерно на 82%, поэтому persistent storage нельзя выбирать наугад.
+
+`HOST_PORT=3011` в example является текущим кандидатом и должен быть повторно проверен непосредственно перед activation.
+
+## 12. Still open before activation
+
+До создания `.prod-enabled` нужно отдельно подтвердить:
+
+- реальный persistent PostgreSQL path;
+- реальный backup path и физический storage;
+- retention policy, если нужна автоматическая очистка;
+- production secrets;
+- повторную доступность выбранного `HOST_PORT`;
+- domain/reverse proxy/HTTPS route;
+- public health URL;
+- первую controlled deployment procedure.
+
+Activation и изменение production infrastructure выполняются отдельно, после этих проверок.
