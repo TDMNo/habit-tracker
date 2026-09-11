@@ -31,8 +31,15 @@ export interface DayCache {
   syncedAt?: string
 }
 
+export interface PendingHabit {
+  habit: Habit
+  startDate: string
+  createdAt: string
+}
+
 export interface TrackerState {
-  version: 3
+  version: 4
   days: Record<string, DayCache>
   pendingEntries: Record<string, Record<string, number>>
+  pendingHabits: Record<string, PendingHabit>
 }
