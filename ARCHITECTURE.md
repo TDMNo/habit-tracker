@@ -14,10 +14,10 @@ Habit Tracker переведён со старого Vanilla JS прототип
 - server-side session auth;
 - habit/entry/target API;
 - per-user client cache;
-- background refresh и optimistic entry updates;
-- durable pending-entry queue;
-- durable pending-habit queue для создания привычек без сети;
+- durable offline queues для создания, редактирования и выполнения привычек;
 - idempotent server-side habit creation по client-generated UUID;
+- исторические цели привычки через `HabitTarget`;
+- архивирование без удаления истории;
 - Docker production runtime foundation.
 
 ## 2. Основная схема
@@ -32,7 +32,7 @@ Node 22 + Express
 PostgreSQL
 ```
 
-PostgreSQL/сервер — source of truth. Клиентский storage используется как быстрый per-user cache, offline fallback и очередь ещё не синхронизированных действий.
+PostgreSQL/сервер — source of truth. Клиентский storage используется как быстрый per-user cache, offline fallback и durable очередь ещё не синхронизированных действий.
 
 ## 3. Быстрый старт и синхронизация
 
@@ -42,20 +42,43 @@ PostgreSQL/сервер — source of truth. Клиентский storage исп
 launch
 → cached user/day immediately when available
 → validate server session in background
-→ flush pending habit definitions
+→ flush pending habit creations
+→ flush pending habit definition/target/archive changes
 → flush pending day entries
 → refresh selected day
 ```
 
-Любое изменение дневного значения сначала применяется локально, затем ставится в очередь и последовательно отправляется на сервер.
+Очереди хранятся отдельно для каждого пользователя.
 
-Новая привычка также создаётся локально сразу. Клиент генерирует UUID, сохраняет определение в `pendingHabits` и показывает его в Today screen даже без сети. После восстановления соединения тот же UUID отправляется на сервер.
+Изменения применяются локально сразу. Server refresh накладывается под pending local state, поэтому медленный ответ сервера не должен затереть ещё не отправленное действие пользователя.
 
-Server POST создания привычки идемпотентен для одного пользователя: повтор той же операции с тем же UUID и теми же полями возвращает уже созданную привычку вместо дубля. Если тот же UUID используется с другими данными или другим владельцем, сервер отвечает конфликтом.
+### Создание
 
-Pending habit definitions синхронизируются раньше pending entries. Поэтому пользователь может офлайн создать новую привычку и сразу отметить её выполнение: после reconnect сначала создаётся Habit, потом отправляется HabitEntry.
+Новая привычка получает client-generated UUID и сохраняется в `pendingHabits`. Server POST идемпотентен: повтор той же операции с тем же UUID и теми же данными не создаёт дубль.
 
-Очереди и кеш хранятся отдельно для каждого пользователя. Server refresh накладывает локальные pending values/definitions поверх ответа сервера, поэтому медленный ответ не должен затереть ещё не отправленное действие.
+### Редактирование
+
+Offline-редактирование хранится в `pendingHabitChanges`.
+
+Порядок синхронизации важен:
+
+1. создать ещё не существующую привычку;
+2. применить её definition/target/archive changes;
+3. отправить дневные значения.
+
+Это позволяет без сети создать привычку, изменить её и сразу отметить выполнение.
+
+Базовые поля `title`, `emoji`, `color` относятся к самой привычке и обновляются глобально.
+
+`target` и `unit` исторические: изменение цели получает `effectiveDate`, поэтому прошлые дни продолжают использовать прежнюю цель.
+
+### Архив
+
+Архивирование не удаляет `Habit`, `HabitTarget` или прошлые `HabitEntry`.
+
+В текущем мобильном UX команда «Архивировать после этого дня» ставит `archivedOn` на следующий календарный день. Выбранный день остаётся частью истории, а привычка исчезает начиная со следующего дня.
+
+Несинхронизированные дневные изменения на датах после архива локально удаляются из очереди, чтобы клиент не отправлял значения для уже неактивной привычки.
 
 ## 4. Backend
 
@@ -63,11 +86,12 @@ Backend отвечает за:
 
 - `/api/health`;
 - session auth;
-- доступ к пользовательским привычкам;
+- ownership checks;
 - idempotent habit creation;
-- выполнение по конкретным датам;
-- историю целей привычки;
-- ownership checks.
+- редактирование базовых полей привычки;
+- исторические target changes;
+- archive date;
+- выполнение по конкретным датам.
 
 Пароли хранятся только как bcrypt hash. Session identifier хранится в httpOnly cookie, session state — в PostgreSQL.
 
@@ -76,18 +100,21 @@ Backend отвечает за:
 Server-side основа:
 
 - `User` — аккаунт и роль;
-- `Habit` — определение привычки;
+- `Habit` — определение привычки и `archived_on`;
 - `HabitTarget` — цель с датой вступления в силу;
 - `HabitEntry` — фактическое значение за конкретную дату;
 - `user_sessions` — server-side sessions.
 
 Изменение цели, например 10 → 20 → 30 минут, не переписывает старую статистику.
 
-Client-side временное состояние дополнительно содержит:
+Client-side состояние дополнительно содержит:
 
 - cached days;
 - `pendingHabits`;
+- `pendingHabitChanges`;
 - `pendingEntries`.
+
+Текущая client cache schema version: `v5`.
 
 Позже добавляются Friendship, Group / GroupMember, Achievement и MonthlyScore.
 
