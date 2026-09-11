@@ -209,6 +209,70 @@ habitsRouter.post('/', async (request, response, next) => {
   }
 })
 
+habitsRouter.patch('/:habitId', async (request, response, next) => {
+  try {
+    const { habitId } = request.params
+    const title = text(request.body?.title, 80)
+    const emoji = text(request.body?.emoji, 16) || '✨'
+    const color = text(request.body?.color, 16)
+
+    if (!title || !habitColors.has(color)) {
+      response.status(400).json({ error: 'invalid_habit_update' })
+      return
+    }
+
+    const result = await pool.query(
+      `UPDATE habits
+       SET title = $3, emoji = $4, color = $5, updated_at = NOW()
+       WHERE id = $1 AND user_id = $2
+       RETURNING id, title, emoji, type, color`,
+      [habitId, request.session.userId, title, emoji, color],
+    )
+
+    if (!result.rows[0]) {
+      response.status(404).json({ error: 'habit_not_found' })
+      return
+    }
+
+    response.json({ habit: result.rows[0] })
+  } catch (error) {
+    next(error)
+  }
+})
+
+habitsRouter.put('/:habitId/archive', async (request, response, next) => {
+  try {
+    const { habitId } = request.params
+    const archivedOn = request.body?.archivedOn
+    if (!validDate(archivedOn)) {
+      response.status(400).json({ error: 'invalid_archive_date' })
+      return
+    }
+
+    const result = await pool.query<{ id: string }>(
+      `UPDATE habits
+       SET archived_on = $3::date, updated_at = NOW()
+       WHERE id = $1 AND user_id = $2 AND start_date <= $3::date
+       RETURNING id`,
+      [habitId, request.session.userId, archivedOn],
+    )
+
+    if (!result.rows[0]) {
+      const exists = await pool.query<{ start_date: string }>(
+        'SELECT start_date::text AS start_date FROM habits WHERE id = $1 AND user_id = $2',
+        [habitId, request.session.userId],
+      )
+      if (!exists.rows[0]) response.status(404).json({ error: 'habit_not_found' })
+      else response.status(400).json({ error: 'archive_before_start' })
+      return
+    }
+
+    response.json({ archive: { habitId, archivedOn } })
+  } catch (error) {
+    next(error)
+  }
+})
+
 habitsRouter.put('/:habitId/entries/:date', async (request, response, next) => {
   try {
     const { habitId, date } = request.params
