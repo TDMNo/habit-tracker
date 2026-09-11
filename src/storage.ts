@@ -1,89 +1,69 @@
-import { localDateKey } from './date'
-import type { Habit, TrackerState } from './types'
+import type { SessionUser, TrackerState } from './types'
 
-const STORAGE_KEY = 'habit-tracker:state:v2'
-const LEGACY_KEY = 'habit-tracker:today:v1'
+const USER_KEY = 'habit-tracker:cached-user:v1'
 
-interface LegacyHabit extends Omit<Habit, 'createdAt'> {
-  value: number
+function stateKey(userId: string) {
+  return `habit-tracker:user:${userId}:state:v3`
 }
 
-function starterState(): TrackerState {
-  const now = new Date().toISOString()
-  const today = localDateKey()
-  const habits: Habit[] = [
-    { id: 'water', title: 'Вода', emoji: '💧', type: 'count', target: 8, unit: 'стаканов', color: 'blue', createdAt: now },
-    { id: 'english', title: 'Английский', emoji: '📚', type: 'duration', target: 30, unit: 'мин', color: 'violet', createdAt: now },
-    { id: 'stretching', title: 'Зарядка', emoji: '⚡', type: 'binary', target: 1, unit: '', color: 'orange', createdAt: now },
-  ]
-
-  return {
-    version: 2,
-    habits,
-    entries: {
-      [today]: {
-        water: { habitId: 'water', date: today, value: 5, updatedAt: now },
-        english: { habitId: 'english', date: today, value: 20, updatedAt: now },
-      },
-    },
-  }
+export function blankState(): TrackerState {
+  return { version: 3, days: {}, pendingEntries: {} }
 }
 
 function isTrackerState(value: unknown): value is TrackerState {
   if (!value || typeof value !== 'object') return false
   const state = value as Partial<TrackerState>
-  return state.version === 2 && Array.isArray(state.habits) && !!state.entries && typeof state.entries === 'object'
+  return state.version === 3 && !!state.days && typeof state.days === 'object'
+    && !!state.pendingEntries && typeof state.pendingEntries === 'object'
 }
 
-function migrateLegacy(habits: LegacyHabit[]): TrackerState {
-  const now = new Date().toISOString()
-  const today = localDateKey()
-  const entries: TrackerState['entries'] = {}
-
-  const migratedHabits = habits.map(({ value, ...habit }) => {
-    if (Number.isFinite(value) && value > 0) {
-      entries[today] ??= {}
-      entries[today][habit.id] = {
-        habitId: habit.id,
-        date: today,
-        value: Math.max(0, Math.min(value, habit.target)),
-        updatedAt: now,
-      }
-    }
-    return { ...habit, createdAt: now }
-  })
-
-  return { version: 2, habits: migratedHabits, entries }
-}
-
-export function loadState(): TrackerState {
+export function loadState(userId: string): TrackerState {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      const parsed: unknown = JSON.parse(saved)
-      if (isTrackerState(parsed)) return parsed
-    }
-
-    const legacy = localStorage.getItem(LEGACY_KEY)
-    if (legacy) {
-      const parsed: unknown = JSON.parse(legacy)
-      if (Array.isArray(parsed)) {
-        const migrated = migrateLegacy(parsed as LegacyHabit[])
-        saveState(migrated)
-        return migrated
-      }
-    }
+    const saved = localStorage.getItem(stateKey(userId))
+    if (!saved) return blankState()
+    const parsed: unknown = JSON.parse(saved)
+    if (isTrackerState(parsed)) return parsed
   } catch {
-    // Invalid or blocked browser storage falls back to a clean in-memory state.
+    // Corrupt or blocked cache must never prevent the app from starting.
   }
-
-  return starterState()
+  return blankState()
 }
 
-export function saveState(state: TrackerState): void {
+export function saveState(userId: string, state: TrackerState): void {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    localStorage.setItem(stateKey(userId), JSON.stringify(state))
   } catch {
-    // UI remains usable when private mode or browser policy blocks storage.
+    // Server remains source of truth if browser storage is unavailable.
+  }
+}
+
+export function loadCachedUser(): SessionUser | null {
+  try {
+    const saved = localStorage.getItem(USER_KEY)
+    if (!saved) return null
+    const parsed = JSON.parse(saved) as Partial<SessionUser>
+    if (typeof parsed.id === 'string' && typeof parsed.login === 'string'
+      && typeof parsed.displayName === 'string' && (parsed.role === 'user' || parsed.role === 'admin')) {
+      return parsed as SessionUser
+    }
+  } catch {
+    // Ignore invalid cache.
+  }
+  return null
+}
+
+export function saveCachedUser(user: SessionUser): void {
+  try {
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
+  } catch {
+    // Authentication still works without a cached offline identity.
+  }
+}
+
+export function clearCachedUser(): void {
+  try {
+    localStorage.removeItem(USER_KEY)
+  } catch {
+    // Nothing else to do.
   }
 }
