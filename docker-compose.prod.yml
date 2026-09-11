@@ -40,8 +40,8 @@ services:
       PGUSER: ${POSTGRES_USER:?POSTGRES_USER is required}
       PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
-      COOKIE_SECURE: "true"
-      TRUST_PROXY: "true"
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
     ports:
       - "127.0.0.1:${HOST_PORT:?HOST_PORT is required}:3000"
     healthcheck:
