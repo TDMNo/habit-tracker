@@ -1,0 +1,55 @@
+name: Habit Tracker PROD Deploy
+
+on:
+  workflow_run:
+    workflows:
+      - Habit Tracker CI
+    types:
+      - completed
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: habit-tracker-prod-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy main to docker-home
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout exact CI-tested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate runner host
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          test "$(hostname)" = "docker-home"
+          test "$(whoami)" = "leo"
+          docker version >/dev/null
+          docker compose version >/dev/null
+          test -d /opt/stacks/habit-tracker/.git
+
+      - name: Deploy production
+        shell: bash
+        env:
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+          SOURCE_DIR: ${{ github.workspace }}
+          PROD_DIR: /opt/stacks/habit-tracker
+        run: bash ./scripts/deploy-prod.sh

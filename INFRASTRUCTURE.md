@@ -2,74 +2,87 @@
 
 ## 1. Status
 
-Infrastructure for the new Habit Tracker is not deployed yet.
+The new Habit Tracker application is not deployed yet, but its production execution path now has a verified server target and dedicated GitHub Actions runner.
 
-Current repository contains an old static Vanilla JS prototype plus target project documentation.
-
-This file describes the intended production shape and the decisions that still need to be made before implementation.
+The legacy Vanilla JS prototype remains in the repository only as a product/UX reference during migration. It is not the target production architecture.
 
 ## 2. Source of truth
 
 - GitHub repository: `TDMNo/habit-tracker`.
-- Production code must come from GitHub.
-- Local development copies must not become independent sources of truth.
+- Main branch: `main`.
+- GitHub remains the source of truth for code and release history.
+- Production checkout: `/opt/stacks/habit-tracker`.
 
-## 3. Target runtime
+## 3. Production host
 
-Recommended direction:
+Confirmed production host:
 
-- frontend: React + TypeScript PWA;
+- host: `docker-home`;
+- user used by deploy runner: `leo`;
+- runtime: Docker + Docker Compose;
+- dedicated repository runner: `docker-home-habit-tracker`;
+- runner installation: `/home/leo/actions-runner-habit-tracker/actions-runner`.
+
+The Habit Tracker runner is separate from the Genealogy runner.
+
+## 4. Target application runtime
+
+Approved direction:
+
+- mobile-first Web/PWA;
+- React + TypeScript frontend;
 - backend API;
-- PostgreSQL;
-- Docker-based runtime where appropriate;
-- reverse proxy / HTTPS;
-- backups;
-- health checks;
-- monitoring.
+- PostgreSQL as server-side source of truth;
+- Docker-based production runtime;
+- reverse proxy / HTTPS once a domain is assigned;
+- local PWA cache for fast startup and offline fallback only.
 
-Exact production host, domain and provider are not confirmed yet.
+Exact backend framework and final Compose topology will be chosen during implementation of the new application.
 
-## 4. Environments
+## 5. Deployment isolation
 
-Target separation:
+Habit Tracker must have its own:
 
-- DEV — local/isolated development;
-- TEST or staging — when useful for risky changes;
-- PROD — real user data.
+- production checkout;
+- containers;
+- PostgreSQL instance/data;
+- environment file;
+- backup path;
+- health endpoints;
+- public route/domain.
 
-Production secrets and data must not be reused casually in DEV.
+Normal Habit Tracker deployment must not restart, recreate or modify Genealogy or other project containers.
 
-## 5. Data
+## 6. Production safety state
 
-Server database is the source of truth.
+Real deployment is currently locked by the absence of:
 
-Persistent production components should include:
+`/opt/stacks/habit-tracker/.prod-enabled`
 
-- PostgreSQL data;
-- backup storage;
-- application secrets/config outside Git.
+The CI/CD wiring may run and validate the runner, but it cannot publish the legacy prototype or mutate the production stack while this lock remains absent.
 
-Client-side storage is cache/offline state only.
+## 7. Data and backups
 
-## 6. Backups
+The future PostgreSQL database will be the server-side source of truth. Persistent storage paths, backup storage and retention are not fixed yet and must be selected before enabling real production deployment.
 
-Before real production use, define and test:
+Required before real users/data:
 
 - automatic PostgreSQL backup;
-- retention;
-- off-host copy;
+- backup verification;
+- retention policy;
 - restore procedure;
-- periodic restore test.
+- periodic restore test;
+- no public PostgreSQL exposure.
 
-## 7. Public access
+## 8. Public access
 
-Production should use a dedicated domain and HTTPS.
+A dedicated production domain and HTTPS route will be assigned later.
 
-Only required public application endpoints should be exposed. PostgreSQL must not be public.
+Until the new application and proxy route are ready, no production domain should be invented or documented as active.
 
-## 8. Monitoring
+## 9. Monitoring
 
-Minimum production monitoring:
+Minimum target monitoring:
 
 - frontend availability;
 - backend health;
@@ -78,28 +91,15 @@ Minimum production monitoring:
 - disk/storage usage;
 - application errors.
 
-## 9. Performance infrastructure
+## 10. Next infrastructure decisions
 
-Because fast startup is a product requirement, infrastructure choices should support:
+Before unlocking production deployment confirm:
 
-- low-latency API responses;
-- efficient caching;
-- compression;
-- optimized static assets;
-- predictable database performance;
-- graceful behavior during temporary network issues.
-
-## 10. Decisions still open
-
-Before production deployment confirm:
-
-- production domain;
-- hosting provider/host;
-- exact backend framework;
-- auth/session implementation;
-- backup location;
-- CI/CD runner model;
-- monitoring target;
-- notification/push infrastructure if added.
-
-Do not invent these values in code or documentation before they are approved.
+- backend framework;
+- final Docker Compose services and ports;
+- database/storage paths;
+- backup path and retention;
+- domain/reverse proxy route;
+- health endpoints;
+- production secrets/session configuration;
+- monitoring target.
