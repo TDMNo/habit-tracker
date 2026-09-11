@@ -106,8 +106,8 @@ if [[ -n "$EXISTING_POSTGRES" && "$(docker inspect -f '{{.State.Running}}' "$EXI
   echo "Creating pre-deploy PostgreSQL backup"
   BACKUP_OUTPUT="$(PROD_DIR="$PROD_DIR" ENV_FILE="$ENV_FILE" COMPOSE_FILE="$COMPOSE_FILE" POSTGRES_BACKUP_DIR="$POSTGRES_BACKUP_DIR" bash "$SOURCE_DIR/scripts/backup-postgres.sh")"
   echo "$BACKUP_OUTPUT"
-  BACKUP_FILE="${BACKUP_OUTPUT#BACKUP_OK }"
-  [[ -f "$BACKUP_FILE" ]] || fail "backup script did not return a valid backup file"
+  BACKUP_FILE="$(printf '%s\n' "$BACKUP_OUTPUT" | awk '/^BACKUP_OK /{sub(/^BACKUP_OK /, ""); print}' | tail -n 1)"
+  [[ -n "$BACKUP_FILE" && -f "$BACKUP_FILE" ]] || fail "backup script did not return a valid backup file"
 
   echo "Verifying backup with disposable restore"
   PROD_DIR="$PROD_DIR" ENV_FILE="$ENV_FILE" COMPOSE_FILE="$COMPOSE_FILE" BACKUP_FILE="$BACKUP_FILE" \
