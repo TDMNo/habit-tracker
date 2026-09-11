@@ -2,69 +2,86 @@
 
 ## 1. Текущее состояние
 
-Habit Tracker переводится со старого Vanilla JS прототипа на новую mobile-first архитектуру.
+Habit Tracker переведён со старого Vanilla JS прототипа на новую mobile-first основу.
 
 Реализовано:
 
 - React + TypeScript + Vite Web/PWA frontend;
 - экран Today и навигация по локальным календарным датам;
-- отдельные `Habit` и `HabitEntry`, чтобы выполнение одного дня не меняло саму привычку;
-- временный versioned local adapter с миграцией v1 → v2;
-- Node 22 + Express backend foundation;
+- `Habit` отдельно от дневного `HabitEntry`;
+- Node 22 + Express backend;
 - PostgreSQL schema и versioned SQL migrations;
 - server-side session auth;
 - habit/entry/target API;
+- per-user client cache;
+- background refresh и optimistic entry updates;
+- durable pending-entry queue для offline/temporary network failure;
 - Docker production runtime foundation.
 
-Frontend пока не синхронизирован с API. До подключения sync локальные данные остаются временным frontend-состоянием, а не production source of truth.
-
-## 2. Целевая схема
+## 2. Основная схема
 
 ```text
 PWA / Web client
- ↓
+ ↓ cached screen + sync layer
 React + TypeScript
- ↓ JSON API
+ ↓ JSON API / session cookie
 Node 22 + Express
  ↓
 PostgreSQL
 ```
 
-PostgreSQL/сервер являются целевым source of truth. Клиентский storage после подключения API используется как быстрый cache, offline fallback и очередь несинхронизированных действий.
+PostgreSQL/сервер — source of truth. Клиентский storage используется только как быстрый per-user cache, offline fallback и очередь ещё не синхронизированных действий.
 
-## 3. Backend
+## 3. Быстрый старт и синхронизация
 
-Backend запускается единым application service и отвечает за:
+Целевой сценарий уже заложен в клиент:
+
+```text
+launch
+→ cached user/day immediately when available
+→ validate server session in background
+→ refresh selected day
+→ optimistic local entry change
+→ queue pending value
+→ sequential background sync
+```
+
+Очередь хранится отдельно для каждого пользователя. Это не позволяет данным разных аккаунтов смешиваться на одном браузере.
+
+Pending values накладываются поверх server refresh, поэтому медленный ответ сервера не должен затереть ещё не отправленное действие пользователя.
+
+Записи синхронизируются последовательно. Это защищает от race condition при быстрых повторных нажатиях `+/-`, когда более старый запрос мог бы прийти позже нового.
+
+При потере сети доступен последний cached day. Изменения существующих привычек сохраняются локально и отправляются после восстановления соединения. Создание новой привычки пока требует серверного соединения.
+
+## 4. Backend
+
+Backend отвечает за:
 
 - `/api/health`;
 - session auth;
 - доступ к пользовательским привычкам;
 - выполнение по конкретным датам;
 - историю целей привычки;
-- авторизацию доступа к данным.
+- ownership checks.
 
-Пароли хранятся только как bcrypt hash. Session identifier хранится в httpOnly cookie, а session state — в PostgreSQL.
+Пароли хранятся только как bcrypt hash. Session identifier хранится в httpOnly cookie, session state — в PostgreSQL.
 
-## 4. Модель данных
+## 5. Модель данных
 
-Текущая server-side основа:
+Server-side основа:
 
 - `User` — аккаунт и роль;
 - `Habit` — определение привычки;
 - `HabitTarget` — цель с датой вступления в силу;
-- `HabitEntry` — фактическое значение привычки за конкретную дату;
+- `HabitEntry` — фактическое значение за конкретную дату;
 - `user_sessions` — server-side sessions.
 
-Это позволяет менять цель, например 10 → 20 → 30 минут, не переписывая старую статистику.
+Изменение цели, например 10 → 20 → 30 минут, не переписывает старую статистику.
 
-Позже добавляются:
+Позже добавляются Friendship, Group / GroupMember, Achievement и MonthlyScore.
 
-- Friendship;
-- Group / GroupMember;
-- Achievement;
-- MonthlyScore.
-
-## 5. Типы привычек
+## 6. Типы привычек
 
 Поддерживаемая модель:
 
@@ -73,15 +90,15 @@ Backend запускается единым application service и отвеча�
 - `duration` — длительность;
 - target history для count/duration.
 
-Daily value хранится в `HabitEntry`, а не внутри `Habit`.
+Фактическое дневное значение хранится в `HabitEntry`, а не внутри `Habit`.
 
-## 6. Даты
+## 7. Даты
 
 Календарная дата пользователя хранится как `YYYY-MM-DD` и формируется из local calendar components, а не через UTC `toISOString()`.
 
-Это важно, чтобы около полуночи выполнение не попадало в соседний день из-за timezone conversion.
+Это предотвращает попадание выполнения в соседний день из-за timezone conversion около полуночи.
 
-## 7. Миграции БД
+## 8. Миграции БД
 
 SQL migrations лежат в `migrations/` и применяются отдельным migration runner.
 
@@ -90,39 +107,23 @@ SQL migrations лежат в `migrations/` и применяются отдел�
 - migrations выполняются по порядку;
 - применённая migration фиксируется вместе с SHA-256 checksum;
 - изменение уже применённого файла вызывает ошибку;
-- используется PostgreSQL advisory lock, чтобы две миграции не запускались одновременно;
-- production schema не должна изменяться через ручной ad-hoc SQL без отдельного решения.
+- используется PostgreSQL advisory lock;
+- production schema не меняется через ручной ad-hoc SQL без отдельного решения.
 
-## 8. Auth
+## 9. Auth
 
-Реализован foundation:
+Реализовано:
 
 - login/password;
-- bcrypt password verification;
+- bcrypt verification;
 - server-side session;
 - `me` / login / logout;
-- active/blocked state на уровне пользователя;
-- backend ownership checks для привычек.
+- active/blocked state;
+- backend ownership checks;
+- mobile login screen;
+- background session validation.
 
-Следующие auth-функции:
-
-- recovery flow;
-- optional 2FA;
-- полноценная user/admin management модель.
-
-## 9. Быстрый UX и sync
-
-Целевая последовательность:
-
-```text
-launch
-→ cached Today immediately
-→ background API refresh
-→ optimistic local change
-→ background sync
-```
-
-Следующий архитектурный этап — подключить текущий frontend к API через отдельный sync/cache layer без блокировки Today screen сетью.
+Следующие auth-функции: recovery flow, optional 2FA и полноценная user/admin management модель.
 
 ## 10. PWA
 
@@ -134,20 +135,20 @@ launch
 - Android/iOS home-screen flow;
 - safe areas;
 - offline shell;
-- обновление service worker;
+- service-worker update flow;
 - совместимость кешированного клиента с текущим API.
 
 ## 11. Production runtime
 
-Целевая production topology уже описана в `docker-compose.prod.yml`:
+`docker-compose.prod.yml` определяет отдельные:
 
 - `habit_tracker_prod_app`;
 - `habit_tracker_prod_postgres`;
-- отдельная internal Docker network;
-- PostgreSQL наружу не публикуется;
-- application bind происходит только на localhost host-порту для последующего reverse proxy.
+- internal Docker network.
 
-Конкретные production port, data path, secrets и domain не фиксируются до проверки реального состояния сервера.
+PostgreSQL наружу не публикуется. Application bind происходит только на localhost host-порту для последующего reverse proxy.
+
+Конкретные production port, persistent data path, backup path, secrets и domain фиксируются только после проверки реального состояния `docker-home`.
 
 ## 12. Изменение архитектуры
 
