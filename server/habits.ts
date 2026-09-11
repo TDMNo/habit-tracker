@@ -6,6 +6,7 @@ import { requireAuth } from './auth'
 const habitTypes = new Set(['binary', 'count', 'duration'])
 const habitColors = new Set(['lime', 'blue', 'violet', 'orange'])
 const datePattern = /^\d{4}-\d{2}-\d{2}$/
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function text(value: unknown, max: number): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -26,6 +27,65 @@ function validDate(value: unknown): value is string {
   const [year, month, day] = value.split('-').map(Number)
   const date = new Date(year, month - 1, day)
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+}
+
+type HabitCreationRow = {
+  id: string
+  user_id: string
+  title: string
+  emoji: string
+  type: string
+  color: string
+  position: number
+  start_date: string
+  target: number
+  unit: string
+}
+
+function habitResponse(row: HabitCreationRow) {
+  return {
+    id: row.id,
+    title: row.title,
+    emoji: row.emoji,
+    type: row.type,
+    color: row.color,
+    position: row.position,
+    startDate: row.start_date,
+    target: row.target,
+    unit: row.unit,
+    value: 0,
+  }
+}
+
+function sameCreation(row: HabitCreationRow, input: {
+  title: string
+  emoji: string
+  type: string
+  color: string
+  startDate: string
+  target: number
+  unit: string
+}) {
+  return row.title === input.title
+    && row.emoji === input.emoji
+    && row.type === input.type
+    && row.color === input.color
+    && row.start_date === input.startDate
+    && Number(row.target) === input.target
+    && row.unit === input.unit
+}
+
+async function findHabitCreation(id: string): Promise<HabitCreationRow | undefined> {
+  const result = await pool.query<HabitCreationRow>(
+    `SELECT h.id, h.user_id, h.title, h.emoji, h.type, h.color, h.position,
+            h.start_date::text AS start_date, ht.target, ht.unit
+     FROM habits h
+     JOIN habit_targets ht
+       ON ht.habit_id = h.id AND ht.effective_from = h.start_date
+     WHERE h.id = $1`,
+    [id],
+  )
+  return result.rows[0]
 }
 
 export const habitsRouter = Router()
@@ -66,6 +126,7 @@ habitsRouter.get('/', async (request, response, next) => {
 })
 
 habitsRouter.post('/', async (request, response, next) => {
+  const requestedId = text(request.body?.id, 64)
   const title = text(request.body?.title, 80)
   const emoji = text(request.body?.emoji, 16) || '✨'
   const type = text(request.body?.type, 16)
@@ -74,7 +135,8 @@ habitsRouter.post('/', async (request, response, next) => {
   const target = positiveInteger(request.body?.target)
   const startDate = request.body?.startDate
 
-  if (!title || !habitTypes.has(type) || !habitColors.has(color) || target === null || !validDate(startDate)) {
+  if ((requestedId && !uuidPattern.test(requestedId)) || !title || !habitTypes.has(type)
+    || !habitColors.has(color) || target === null || !validDate(startDate)) {
     response.status(400).json({ error: 'invalid_habit' })
     return
   }
@@ -84,36 +146,66 @@ habitsRouter.post('/', async (request, response, next) => {
     return
   }
 
-  const client = await pool.connect()
+  const id = requestedId || randomUUID()
+  const creationInput = { title, emoji, type, color, startDate, target, unit }
+
   try {
-    await client.query('BEGIN')
-    const id = randomUUID()
-    const positionResult = await client.query<{ next_position: number }>(
-      'SELECT COALESCE(MAX(position), -1) + 1 AS next_position FROM habits WHERE user_id = $1',
-      [request.session.userId],
-    )
-    const position = Number(positionResult.rows[0]?.next_position ?? 0)
+    const existing = await findHabitCreation(id)
+    if (existing) {
+      if (existing.user_id !== request.session.userId || !sameCreation(existing, creationInput)) {
+        response.status(409).json({ error: 'habit_id_conflict' })
+        return
+      }
+      response.json({ habit: habitResponse(existing) })
+      return
+    }
 
-    await client.query(
-      `INSERT INTO habits (id, user_id, title, emoji, type, color, position, start_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8::date)`,
-      [id, request.session.userId, title, emoji, type, color, position, startDate],
-    )
-    await client.query(
-      `INSERT INTO habit_targets (habit_id, effective_from, target, unit)
-       VALUES ($1, $2::date, $3, $4)`,
-      [id, startDate, target, unit],
-    )
-    await client.query('COMMIT')
+    const client = await pool.connect()
+    try {
+      await client.query('BEGIN')
+      const positionResult = await client.query<{ next_position: number }>(
+        'SELECT COALESCE(MAX(position), -1) + 1 AS next_position FROM habits WHERE user_id = $1',
+        [request.session.userId],
+      )
+      const position = Number(positionResult.rows[0]?.next_position ?? 0)
 
-    response.status(201).json({
-      habit: { id, title, emoji, type, color, position, startDate, target, unit, value: 0 },
-    })
+      const insertResult = await client.query<{ id: string }>(
+        `INSERT INTO habits (id, user_id, title, emoji, type, color, position, start_date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8::date)
+         ON CONFLICT (id) DO NOTHING
+         RETURNING id`,
+        [id, request.session.userId, title, emoji, type, color, position, startDate],
+      )
+
+      if (!insertResult.rows[0]) {
+        await client.query('ROLLBACK')
+        const raced = await findHabitCreation(id)
+        if (!raced || raced.user_id !== request.session.userId || !sameCreation(raced, creationInput)) {
+          response.status(409).json({ error: 'habit_id_conflict' })
+          return
+        }
+        response.json({ habit: habitResponse(raced) })
+        return
+      }
+
+      await client.query(
+        `INSERT INTO habit_targets (habit_id, effective_from, target, unit)
+         VALUES ($1, $2::date, $3, $4)`,
+        [id, startDate, target, unit],
+      )
+      await client.query('COMMIT')
+
+      response.status(201).json({
+        habit: { id, title, emoji, type, color, position, startDate, target, unit, value: 0 },
+      })
+    } catch (error) {
+      await client.query('ROLLBACK')
+      throw error
+    } finally {
+      client.release()
+    }
   } catch (error) {
-    await client.query('ROLLBACK')
     next(error)
-  } finally {
-    client.release()
   }
 })
 
