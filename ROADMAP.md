@@ -15,13 +15,15 @@
 
 ## Phase 2 — Data and accounts
 
-- `DONE` Backend direction: Node 22 + Express + PostgreSQL.
+- `DONE` Backend: Node 22 + Express + PostgreSQL.
 - `DONE` Versioned PostgreSQL schema and checksum-verified migrations.
 - `DONE` User, Habit, HabitEntry and HabitTarget history foundation.
 - `DONE` Login/session/logout backend foundation.
 - `DONE` Authenticated habit/day-entry API foundation.
-- `NEXT` Connect frontend login and session state.
-- `NEXT` Replace temporary local-only state with cache + API sync queue.
+- `DONE` Frontend login and background session validation.
+- `DONE` Per-user cache + optimistic API sync queue for existing habit entries.
+- `DONE` Reconnect flow that flushes pending values before refreshing the day.
+- `NEXT` Offline-safe creation/editing of habit definitions.
 - `NEXT` Recovery flow and optional 2FA.
 
 ## Phase 3 — Product depth
@@ -37,7 +39,7 @@
 - `DONE` Dedicated repository-scoped self-hosted runner.
 - `DONE` GitHub main → CI → locked PROD workflow wiring.
 - `DONE` Isolated Docker app/PostgreSQL topology defined.
-- `NEXT` Confirm server port, persistent DB path and backup path from real host state.
+- `NEXT` Inspect real server state and confirm free host port, persistent DB path and backup path.
 - `NEXT` Implement and verify automatic PostgreSQL backup + restore procedure.
 - `NEXT` Complete production deploy script and controlled first deploy.
 - `LATER` Assign production domain + HTTPS reverse proxy route.
