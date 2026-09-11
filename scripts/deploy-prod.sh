@@ -7,6 +7,8 @@ SOURCE_DIR="${SOURCE_DIR:-$(git rev-parse --show-toplevel)}"
 PROD_LOCK_FILE="${PROD_LOCK_FILE:-$PROD_DIR/.prod-enabled}"
 ENV_FILE="${ENV_FILE:-$PROD_DIR/.env.production}"
 COMPOSE_FILE="$SOURCE_DIR/docker-compose.prod.yml"
+ROLLBACK_READY=false
+DEPLOY_COMPLETE=false
 
 fail() {
   echo "DEPLOY ERROR: $*" >&2
@@ -57,6 +59,15 @@ rollback_app() {
     wait_healthy habit_tracker_prod_app 30 || true
   fi
 }
+
+on_exit() {
+  local rc=$?
+  if [[ "$rc" -ne 0 && "$ROLLBACK_READY" == "true" && "$DEPLOY_COMPLETE" != "true" ]]; then
+    rollback_app || true
+  fi
+  return "$rc"
+}
+trap on_exit EXIT
 
 [[ -d "$PROD_DIR/.git" ]] || fail "production repo not found: $PROD_DIR"
 
@@ -119,6 +130,7 @@ fi
 if docker container inspect habit_tracker_prod_app >/dev/null 2>&1; then
   OLD_APP_IMAGE="$(docker inspect -f '{{.Image}}' habit_tracker_prod_app)"
   docker tag "$OLD_APP_IMAGE" habit-tracker-app:rollback
+  ROLLBACK_READY=true
 fi
 
 compose build app
@@ -127,44 +139,23 @@ wait_healthy habit_tracker_prod_postgres 45 || fail "PostgreSQL did not become h
 
 compose run --rm --no-deps app node dist/migrate.cjs
 
-set +e
 compose up -d --no-deps app
-APP_UP_RC=$?
-if [[ "$APP_UP_RC" -eq 0 ]]; then
-  wait_healthy habit_tracker_prod_app 45
-  APP_HEALTH_RC=$?
-else
-  APP_HEALTH_RC="$APP_UP_RC"
-fi
-set -e
-
-if [[ "$APP_HEALTH_RC" -ne 0 ]]; then
-  rollback_app
-  fail "new application container failed health check"
-fi
+wait_healthy habit_tracker_prod_app 45 || fail "new application container failed health check"
 
 HOST_HEALTH="http://127.0.0.1:${HOST_PORT}/api/health"
-curl -fsS --max-time 10 "$HOST_HEALTH" | grep -q '"status":"ok"' || {
-  rollback_app
-  fail "private host health check failed: $HOST_HEALTH"
-}
+curl -fsS --max-time 10 "$HOST_HEALTH" | grep -q '"status":"ok"' || fail "private host health check failed: $HOST_HEALTH"
 
 PUBLIC_HEALTH_URL="$(read_env_value PUBLIC_HEALTH_URL || true)"
 if [[ -n "$PUBLIC_HEALTH_URL" ]]; then
-  curl -fsS --max-time 15 "$PUBLIC_HEALTH_URL" | grep -q '"status":"ok"' || {
-    rollback_app
-    fail "public health check failed"
-  }
+  curl -fsS --max-time 15 "$PUBLIC_HEALTH_URL" | grep -q '"status":"ok"' || fail "public health check failed"
 fi
 
 # Update the durable production checkout only after the new runtime is healthy.
 git -C "$PROD_DIR" fetch --prune origin main
 REMOTE_MAIN="$(git -C "$PROD_DIR" rev-parse origin/main)"
-[[ "$REMOTE_MAIN" == "$TARGET_SHA" ]] || {
-  rollback_app
-  fail "origin/main moved during deployment: $REMOTE_MAIN != $TARGET_SHA"
-}
+[[ "$REMOTE_MAIN" == "$TARGET_SHA" ]] || fail "origin/main moved during deployment: $REMOTE_MAIN != $TARGET_SHA"
 git -C "$PROD_DIR" merge --ff-only "$TARGET_SHA"
 [[ "$(git -C "$PROD_DIR" rev-parse HEAD)" == "$TARGET_SHA" ]] || fail "production checkout did not reach target SHA"
 
+DEPLOY_COMPLETE=true
 printf 'DEPLOY_OK %s\n' "$TARGET_SHA"
