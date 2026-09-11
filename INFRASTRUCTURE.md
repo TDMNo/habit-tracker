@@ -4,7 +4,7 @@
 
 Infrastructure for the new Habit Tracker is not deployed yet.
 
-Current repository contains an old static Vanilla JS prototype plus target project documentation.
+Current repository contains the first React + TypeScript mobile PWA frontend. Backend, database and production infrastructure are not deployed yet.
 
 This file describes the intended production shape and the decisions that still need to be made before implementation.
 
@@ -18,7 +18,7 @@ This file describes the intended production shape and the decisions that still n
 
 Recommended direction:
 
-- frontend: React + TypeScript PWA;
+- frontend: React + TypeScript + Vite PWA (foundation implemented);
 - backend API;
 - PostgreSQL;
 - Docker-based runtime where appropriate;

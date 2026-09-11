@@ -4,7 +4,7 @@
 
 Automated production deployment for the new Habit Tracker has not been configured yet.
 
-The current repository still contains the legacy static prototype, so no production workflow should pretend the new architecture already exists.
+The current repository contains the first React + TypeScript PWA frontend foundation. It is not production-ready because backend, server storage, authentication and automated deployment are not implemented yet.
 
 ## 2. Target flow
 

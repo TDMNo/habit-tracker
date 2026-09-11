@@ -2,9 +2,9 @@
 
 ## 1. Роль документа
 
-Этот файл описывает целевую архитектуру новой версии Habit Tracker.
+Этот файл описывает текущую основу и целевую архитектуру новой версии Habit Tracker.
 
-Текущий Vanilla JS код в repository является прототипом и не считается конечной архитектурой.
+С 11 сентября 2026 года в репозитории реализована новая mobile-first основа на React + TypeScript + Vite. Backend и PostgreSQL ещё не реализованы. Старый Vanilla JS прототип сохранён в Git history и не является текущей кодовой базой.
 
 ## 2. Целевая схема
 
@@ -22,9 +22,11 @@ PostgreSQL
 
 ## 3. Основные компоненты
 
-- Mobile-first PWA frontend.
-- Backend API.
-- PostgreSQL.
+- Mobile-first PWA frontend — реализована первая версия экрана Today.
+- Local cache — временно реализован через versioned LocalStorage adapter до появления серверной синхронизации.
+- Service worker и Web App Manifest — добавлена базовая установка и offline shell.
+- Backend API — запланирован.
+- PostgreSQL — запланирован.
 - Server-side auth/session layer.
 - Local client cache.
 - Background sync where appropriate.
@@ -76,7 +78,7 @@ launch → cached today screen → background refresh → sync
 
 ## 7. Offline / cache
 
-LocalStorage не является source of truth.
+LocalStorage не является целевым source of truth. На первом frontend-этапе он временно хранит локальные данные через отдельный storage adapter.
 
 Для новой версии следует использовать подходящее локальное хранилище PWA как кеш и очередь временно несинхронизированных действий.
 
