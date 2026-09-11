@@ -184,6 +184,8 @@ jobs:
           POSTGRES_BACKUP_DIR=$BACKUP_DIR
           SESSION_SECRET=ci-compose-session-secret-0123456789abcdef
           HOST_PORT=3199
+          COOKIE_SECURE=false
+          TRUST_PROXY=false
           EOF
           docker compose --env-file .env.ci-production -f docker-compose.prod.yml config --quiet
 
