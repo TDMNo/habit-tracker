@@ -23,7 +23,8 @@
 - `DONE` Frontend login and background session validation.
 - `DONE` Per-user cache + optimistic API sync queue for existing habit entries.
 - `DONE` Reconnect flow that flushes pending values before refreshing the day.
-- `NEXT` Offline-safe creation/editing of habit definitions.
+- `DONE` Offline-safe habit creation with client UUID and idempotent server retry.
+- `NEXT` Offline-safe editing/archiving of habit definitions.
 - `NEXT` Recovery flow and optional 2FA.
 
 ## Phase 3 — Product depth
