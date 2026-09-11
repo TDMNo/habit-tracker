@@ -1,6 +1,13 @@
 export type HabitType = 'binary' | 'count' | 'duration'
 export type HabitColor = 'lime' | 'blue' | 'violet' | 'orange'
 
+export interface SessionUser {
+  id: string
+  login: string
+  displayName: string
+  role: 'user' | 'admin'
+}
+
 export interface Habit {
   id: string
   title: string
@@ -9,7 +16,6 @@ export interface Habit {
   target: number
   unit: string
   color: HabitColor
-  createdAt: string
 }
 
 export interface HabitEntry {
@@ -19,8 +25,14 @@ export interface HabitEntry {
   updatedAt: string
 }
 
-export interface TrackerState {
-  version: 2
+export interface DayCache {
   habits: Habit[]
-  entries: Record<string, Record<string, HabitEntry>>
+  entries: Record<string, HabitEntry>
+  syncedAt?: string
+}
+
+export interface TrackerState {
+  version: 3
+  days: Record<string, DayCache>
+  pendingEntries: Record<string, Record<string, number>>
 }
