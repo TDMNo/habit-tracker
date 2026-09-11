@@ -89,7 +89,7 @@ HOST_PORT="$(read_env_value HOST_PORT || true)"
 
 [[ "$POSTGRES_DATA_DIR" == /* ]] || fail "POSTGRES_DATA_DIR must be an absolute path"
 [[ "$POSTGRES_BACKUP_DIR" == /* ]] || fail "POSTGRES_BACKUP_DIR must be an absolute path"
-[[ -d "$POSTGRES_DATA_DIR" && -w "$POSTGRES_DATA_DIR" ]] || fail "POSTGRES_DATA_DIR must already exist and be writable"
+[[ -d "$POSTGRES_DATA_DIR" ]] || fail "POSTGRES_DATA_DIR must already exist"
 [[ -d "$POSTGRES_BACKUP_DIR" && -w "$POSTGRES_BACKUP_DIR" ]] || fail "POSTGRES_BACKUP_DIR must already exist and be writable"
 [[ "$HOST_PORT" =~ ^[0-9]+$ && "$HOST_PORT" -ge 1 && "$HOST_PORT" -le 65535 ]] || fail "HOST_PORT is invalid"
 
@@ -119,8 +119,6 @@ fi
 if docker container inspect habit_tracker_prod_app >/dev/null 2>&1; then
   OLD_APP_IMAGE="$(docker inspect -f '{{.Image}}' habit_tracker_prod_app)"
   docker tag "$OLD_APP_IMAGE" habit-tracker-app:rollback
-else
-  OLD_APP_IMAGE=""
 fi
 
 compose build app
