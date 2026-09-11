@@ -39,9 +39,12 @@
 - `DONE` Dedicated repository-scoped self-hosted runner.
 - `DONE` GitHub main → CI → locked PROD workflow wiring.
 - `DONE` Isolated Docker app/PostgreSQL topology defined.
-- `NEXT` Inspect real server state and confirm free host port, persistent DB path and backup path.
-- `NEXT` Implement and verify automatic PostgreSQL backup + restore procedure.
-- `NEXT` Complete production deploy script and controlled first deploy.
+- `DONE` Read-only server baseline and current host-port map captured; 3011 identified as a candidate.
+- `DONE` PostgreSQL backup + checksum + disposable restore verification implemented and exercised in CI.
+- `DONE` Backup-first production deploy script, health checks and app image rollback implemented and exercised in CI.
+- `NEXT` Inspect real block devices/mounts and choose persistent PostgreSQL + backup storage paths.
+- `NEXT` Prepare server-only production environment/secrets and directories.
+- `NEXT` Controlled first PROD activation and deployment.
 - `LATER` Assign production domain + HTTPS reverse proxy route.
-- `LATER` Add monitoring and backup freshness alerts.
+- `LATER` Add scheduled backup/freshness monitoring and disk alerts.
 - `LATER` PWA install/update verification on Android and iOS.
