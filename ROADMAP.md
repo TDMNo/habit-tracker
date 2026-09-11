@@ -4,32 +4,42 @@
 
 ## Phase 1 — Mobile foundation
 
-- `DONE` React + TypeScript + Vite project foundation.
+- `DONE` React + TypeScript + Vite foundation.
 - `DONE` Mobile-first Today screen.
 - `DONE` Binary, count and duration interactions.
 - `DONE` Day progress and quick habit creation.
-- `DONE` Versioned local persistence adapter.
+- `DONE` Habit definitions separated from daily HabitEntry history.
+- `DONE` Local calendar date handling without UTC day-shift bug.
 - `DONE` Base PWA manifest and offline shell.
-- `NEXT` User visual review on a real phone viewport.
+- `NEXT` Visual acceptance on real phone viewport.
 
 ## Phase 2 — Data and accounts
 
-- `NEXT` Confirm backend framework and auth/session implementation.
-- `NEXT` Define versioned PostgreSQL schema and migrations.
-- `NEXT` Implement User, Habit, HabitEntry and HabitTarget history.
-- `NEXT` Add login, session and recovery flow.
-- `NEXT` Replace local-only persistence with cache + sync queue.
+- `DONE` Backend direction: Node 22 + Express + PostgreSQL.
+- `DONE` Versioned PostgreSQL schema and checksum-verified migrations.
+- `DONE` User, Habit, HabitEntry and HabitTarget history foundation.
+- `DONE` Login/session/logout backend foundation.
+- `DONE` Authenticated habit/day-entry API foundation.
+- `NEXT` Connect frontend login and session state.
+- `NEXT` Replace temporary local-only state with cache + API sync queue.
+- `NEXT` Recovery flow and optional 2FA.
 
 ## Phase 3 — Product depth
 
-- `LATER` Weekly and monthly statistics, streaks and averages.
+- `LATER` Weekly/monthly statistics, streaks and averages.
 - `LATER` Friends, groups and privacy controls.
 - `LATER` Stars, achievements and monthly score.
 - `LATER` Separate Admin interface.
 
 ## Phase 4 — Production
 
-- `LATER` Confirm domain, host and CI/CD runner.
-- `LATER` Backups, monitoring and health checks.
-- `LATER` Safe automated GitHub main → CI → PROD deployment.
-- `LATER` PWA installation/update verification on Android and iOS.
+- `DONE` Production host confirmed: docker-home.
+- `DONE` Dedicated repository-scoped self-hosted runner.
+- `DONE` GitHub main → CI → locked PROD workflow wiring.
+- `DONE` Isolated Docker app/PostgreSQL topology defined.
+- `NEXT` Confirm server port, persistent DB path and backup path from real host state.
+- `NEXT` Implement and verify automatic PostgreSQL backup + restore procedure.
+- `NEXT` Complete production deploy script and controlled first deploy.
+- `LATER` Assign production domain + HTTPS reverse proxy route.
+- `LATER` Add monitoring and backup freshness alerts.
+- `LATER` PWA install/update verification on Android and iOS.

@@ -1,156 +1,154 @@
 # Habit Tracker — Architecture
 
-## 1. Роль документа
+## 1. Текущее состояние
 
-Этот файл описывает текущую основу и целевую архитектуру новой версии Habit Tracker.
+Habit Tracker переводится со старого Vanilla JS прототипа на новую mobile-first архитектуру.
 
-С 11 сентября 2026 года в новой кодовой базе реализована mobile-first основа на React + TypeScript + Vite. Старый Vanilla JS прототип сохранён в Git history и больше не является активной кодовой базой.
+Реализовано:
 
-Backend и PostgreSQL ещё не реализованы, поэтому текущий frontend использует временный локальный adapter только для разработки интерфейса.
+- React + TypeScript + Vite Web/PWA frontend;
+- экран Today и навигация по локальным календарным датам;
+- отдельные `Habit` и `HabitEntry`, чтобы выполнение одного дня не меняло саму привычку;
+- временный versioned local adapter с миграцией v1 → v2;
+- Node 22 + Express backend foundation;
+- PostgreSQL schema и versioned SQL migrations;
+- server-side session auth;
+- habit/entry/target API;
+- Docker production runtime foundation.
+
+Frontend пока не синхронизирован с API. До подключения sync локальные данные остаются временным frontend-состоянием, а не production source of truth.
 
 ## 2. Целевая схема
 
 ```text
 PWA / Web client
  ↓
-React + TypeScript frontend
- ↓ API
-Backend service
+React + TypeScript
+ ↓ JSON API
+Node 22 + Express
  ↓
 PostgreSQL
 ```
 
-Сервер является source of truth. Клиент хранит локальный кеш для быстрого старта и offline fallback.
+PostgreSQL/сервер являются целевым source of truth. Клиентский storage после подключения API используется как быстрый cache, offline fallback и очередь несинхронизированных действий.
 
-## 3. Основные компоненты
+## 3. Backend
 
-- Mobile-first PWA frontend — реализована первая версия экрана Today.
-- React + TypeScript + Vite — реализовано.
-- Web App Manifest и service worker — реализована базовая PWA-основа.
-- Временный versioned LocalStorage adapter — только до подключения API и синхронизации.
-- Backend API — следующий этап.
-- PostgreSQL — следующий этап.
-- Server-side auth/session layer — следующий этап.
-- Local client cache и очередь несинхронизированных действий — целевой этап синхронизации.
-- Admin interface — позже.
+Backend запускается единым application service и отвечает за:
 
-## 4. Основные сущности
+- `/api/health`;
+- session auth;
+- доступ к пользовательским привычкам;
+- выполнение по конкретным датам;
+- историю целей привычки;
+- авторизацию доступа к данным.
 
-- User
-- Habit
-- HabitEntry
-- HabitTarget / target history
-- HabitType
-- Friendship
-- Group
-- GroupMember
-- Achievement
-- MonthlyScore
+Пароли хранятся только как bcrypt hash. Session identifier хранится в httpOnly cookie, а session state — в PostgreSQL.
 
-`Habit` описывает саму привычку.
+## 4. Модель данных
 
-`HabitEntry` фиксирует выполнение в конкретный день.
+Текущая server-side основа:
 
-Историческое выполнение не должно изменяться при последующем изменении цели привычки.
+- `User` — аккаунт и роль;
+- `Habit` — определение привычки;
+- `HabitTarget` — цель с датой вступления в силу;
+- `HabitEntry` — фактическое значение привычки за конкретную дату;
+- `user_sessions` — server-side sessions.
+
+Это позволяет менять цель, например 10 → 20 → 30 минут, не переписывая старую статистику.
+
+Позже добавляются:
+
+- Friendship;
+- Group / GroupMember;
+- Achievement;
+- MonthlyScore.
 
 ## 5. Типы привычек
 
-Архитектура поддерживает и должна развивать как минимум:
+Поддерживаемая модель:
 
-- Binary;
-- Count;
-- Duration;
-- target value поверх Count/Duration.
+- `binary` — выполнено / не выполнено;
+- `count` — количество;
+- `duration` — длительность;
+- target history для count/duration.
 
-Тип привычки не должен быть зашит в отдельный UI без общей модели данных.
+Daily value хранится в `HabitEntry`, а не внутри `Habit`.
 
-## 6. Быстрый UX
+## 6. Даты
 
-Ключевой сценарий:
+Календарная дата пользователя хранится как `YYYY-MM-DD` и формируется из local calendar components, а не через UTC `toISOString()`.
 
-```text
-launch → cached today screen → background refresh → sync
-```
+Это важно, чтобы около полуночи выполнение не попадало в соседний день из-за timezone conversion.
 
-Основной экран не должен быть пустым только потому, что сеть отвечает медленно.
+## 7. Миграции БД
 
-При отметке привычки UI реагирует сразу, а серверная синхронизация происходит максимально незаметно.
+SQL migrations лежат в `migrations/` и применяются отдельным migration runner.
 
-Конфликты синхронизации должны разрешаться предсказуемо и не терять пользовательские действия.
+Правила:
 
-## 7. Offline / cache
-
-LocalStorage не является целевым source of truth.
-
-На текущем frontend-этапе он используется только через отдельный storage adapter, чтобы интерфейс уже можно было разрабатывать и тестировать без привязки к будущей серверной модели.
-
-После появления API локальное хранилище становится кешем и очередью временно несинхронизированных действий.
-
-Offline режим должен позволять как минимум:
-
-- открыть последний актуальный Today screen;
-- отметить доступные привычки;
-- сохранить изменения локально;
-- синхронизировать их после восстановления сети.
+- migrations выполняются по порядку;
+- применённая migration фиксируется вместе с SHA-256 checksum;
+- изменение уже применённого файла вызывает ошибку;
+- используется PostgreSQL advisory lock, чтобы две миграции не запускались одновременно;
+- production schema не должна изменяться через ручной ad-hoc SQL без отдельного решения.
 
 ## 8. Auth
 
-Целевой подход — полноценная серверная авторизация по модели, проверенной в Genealogy, но без слепого копирования реализации.
-
-Требования:
+Реализован foundation:
 
 - login/password;
-- secure session;
+- bcrypt password verification;
+- server-side session;
+- `me` / login / logout;
+- active/blocked state на уровне пользователя;
+- backend ownership checks для привычек.
+
+Следующие auth-функции:
+
 - recovery flow;
 - optional 2FA;
-- блокировка пользователя;
-- приватность по умолчанию.
+- полноценная user/admin management модель.
 
-## 9. Социальная модель
+## 9. Быстрый UX и sync
 
-Социальная часть опциональна.
+Целевая последовательность:
 
-Пользователь не обязан участвовать в рейтингах или делиться привычками.
+```text
+launch
+→ cached Today immediately
+→ background API refresh
+→ optimistic local change
+→ background sync
+```
 
-Visibility привычки/результата:
+Следующий архитектурный этап — подключить текущий frontend к API через отдельный sync/cache layer без блокировки Today screen сетью.
 
-- private;
-- friends;
-- group.
+## 10. PWA
 
-Доступ к приватным данным должен контролироваться на backend, а не только скрываться в UI.
+Базовые manifest/service worker уже есть.
 
-## 10. Statistics
-
-Статистика строится из сохранённой истории HabitEntry и исторических целей.
-
-Нужны недельные/месячные агрегаты, streaks, completion %, averages и monthly score.
-
-Тяжёлые вычисления не должны замедлять старт Today screen.
-
-## 11. Admin
-
-Admin отделён от пользовательского интерфейса.
-
-Admin должен управлять аккаунтами, состоянием системы, группами и диагностикой, но не давать администратору ненужный доступ к приватному содержимому привычек.
-
-## 12. PWA
-
-PWA должна поддерживать:
+Перед production release должны быть проверены:
 
 - installability;
-- service worker;
-- корректное обновление версии;
-- mobile safe areas;
-- Android/iOS home screen сценарий;
-- offline fallback.
+- Android/iOS home-screen flow;
+- safe areas;
+- offline shell;
+- обновление service worker;
+- совместимость кешированного клиента с текущим API.
 
-## 13. Миграция со старого прототипа
+## 11. Production runtime
 
-Старый LocalStorage формат не становится новой серверной схемой автоматически.
+Целевая production topology уже описана в `docker-compose.prod.yml`:
 
-Полезная продуктовая логика прототипа переносится осознанно в новую модель. Если понадобится импорт старых пользовательских данных, он проектируется как отдельный migration/import flow.
+- `habit_tracker_prod_app`;
+- `habit_tracker_prod_postgres`;
+- отдельная internal Docker network;
+- PostgreSQL наружу не публикуется;
+- application bind происходит только на localhost host-порту для последующего reverse proxy.
 
-## 14. Изменение архитектуры
+Конкретные production port, data path, secrets и domain не фиксируются до проверки реального состояния сервера.
 
-Если меняются backend stack, database, auth model, sync model или основная модель данных — обновить этот файл и при необходимости `PROJECT_INSTRUCTIONS.md`.
+## 12. Изменение архитектуры
+
+Если меняются backend stack, database, auth/session model, sync model или основная data model — обновить этот файл, `PROJECT_INSTRUCTIONS.md` и при необходимости `DECISIONS.md`.

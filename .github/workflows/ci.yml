@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Validate project and build when modern app exists
+    name: Typecheck, tests and production build
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -33,37 +33,120 @@ jobs:
           test -f DEPLOYMENT.md
           test -f INFRASTRUCTURE.md
 
-      - name: Detect modern application
-        id: app
-        shell: bash
-        run: |
-          if [[ -f package.json && -f package-lock.json ]]; then
-            echo "modern=true" >> "$GITHUB_OUTPUT"
-            echo "Modern Node application detected"
-          else
-            echo "modern=false" >> "$GITHUB_OUTPUT"
-            echo "Bootstrap mode: legacy prototype remains, no production build is attempted"
-          fi
-
       - name: Setup Node.js
-        if: steps.app.outputs.modern == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
 
       - name: Install dependencies
-        if: steps.app.outputs.modern == 'true'
         run: npm ci --no-audit --no-fund
 
       - name: Typecheck
-        if: steps.app.outputs.modern == 'true'
-        run: npm run typecheck --if-present
+        run: npm run typecheck
 
-      - name: Tests
-        if: steps.app.outputs.modern == 'true'
-        run: npm test --if-present
+      - name: Unit tests
+        run: npm test
 
       - name: Production build
-        if: steps.app.outputs.modern == 'true'
-        run: npm run build --if-present
+        run: npm run build
+
+  backend-smoke:
+    name: PostgreSQL, migrations, auth and API smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: quality
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: habit_tracker_ci
+          POSTGRES_USER: habit_tracker_ci
+          POSTGRES_PASSWORD: ci-postgres-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U habit_tracker_ci -d habit_tracker_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: production
+      APP_BIND_ADDRESS: 127.0.0.1
+      APP_PORT: 3100
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGDATABASE: habit_tracker_ci
+      PGUSER: habit_tracker_ci
+      PGPASSWORD: ci-postgres-password
+      SESSION_SECRET: ci-only-session-secret-0123456789abcdef
+      COOKIE_SECURE: "false"
+      TRUST_PROXY: "false"
+      ADMIN_LOGIN: ci-admin
+      ADMIN_PASSWORD: CI-only-Strong-Password-123!
+      ADMIN_DISPLAY_NAME: CI Admin
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --include=dev --no-audit --no-fund
+
+      - name: Build application
+        run: npm run build
+
+      - name: Apply migrations
+        run: node dist/migrate.cjs
+
+      - name: Create CI admin
+        run: node dist/create-admin.cjs
+
+      - name: Start production server
+        shell: bash
+        run: |
+          node dist/server.cjs > /tmp/habit-tracker.log 2>&1 &
+          echo $! > /tmp/habit-tracker.pid
+
+      - name: Wait for health
+        shell: bash
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3100/api/health | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/habit-tracker.log
+          exit 1
+
+      - name: Verify session auth and habit API
+        shell: bash
+        run: |
+          curl -fsS -c /tmp/cookies.txt \
+            -H 'Content-Type: application/json' \
+            -d '{"login":"ci-admin","password":"CI-only-Strong-Password-123!"}' \
+            http://127.0.0.1:3100/api/auth/login | grep -q '"login":"ci-admin"'
+          curl -fsS -b /tmp/cookies.txt \
+            http://127.0.0.1:3100/api/auth/me | grep -q '"login":"ci-admin"'
+          curl -fsS -b /tmp/cookies.txt \
+            'http://127.0.0.1:3100/api/habits?date=2026-09-11' | grep -q '"habits":\[\]'
+
+      - name: Show server log on failure
+        if: failure()
+        run: cat /tmp/habit-tracker.log || true
+
+      - name: Stop server
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f /tmp/habit-tracker.pid ]]; then
+            kill "$(cat /tmp/habit-tracker.pid)" 2>/dev/null || true
+          fi
