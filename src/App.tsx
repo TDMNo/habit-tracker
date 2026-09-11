@@ -1,48 +1,77 @@
 import { useMemo, useState, type CSSProperties } from 'react'
-import { loadHabits, saveHabits } from './storage'
-import type { Habit, HabitType } from './types'
+import { daysAround, localDateKey, parseLocalDateKey } from './date'
+import { loadState, saveState } from './storage'
+import type { Habit, HabitType, TrackerState } from './types'
 
-const weekDays = Array.from({ length: 7 }, (_, offset) => {
-  const date = new Date()
-  date.setDate(date.getDate() - 3 + offset)
-  return {
-    key: date.toISOString().slice(0, 10),
-    day: date.toLocaleDateString('ru-RU', { weekday: 'short' }).replace('.', ''),
-    date: date.getDate(),
-    isToday: offset === 3,
-  }
-})
-
-function completion(habit: Habit): number {
-  return Math.min(habit.value / habit.target, 1)
+function completion(habit: Habit, value: number): number {
+  if (habit.target <= 0) return 0
+  return Math.min(Math.max(value, 0) / habit.target, 1)
 }
 
 function App() {
-  const [habits, setHabits] = useState<Habit[]>(loadHabits)
+  const [state, setState] = useState<TrackerState>(loadState)
+  const [selectedDate, setSelectedDate] = useState(localDateKey)
   const [isAdding, setIsAdding] = useState(false)
   const [title, setTitle] = useState('')
   const [type, setType] = useState<HabitType>('binary')
 
-  const progress = useMemo(() => {
-    if (!habits.length) return 0
-    const total = habits.reduce((sum, habit) => sum + completion(habit), 0)
-    return Math.round((total / habits.length) * 100)
-  }, [habits])
+  const weekDays = useMemo(() => daysAround(selectedDate), [selectedDate])
+  const selectedDateObject = useMemo(() => parseLocalDateKey(selectedDate), [selectedDate])
+  const isToday = selectedDate === localDateKey()
 
-  const updateHabits = (next: Habit[]) => {
-    setHabits(next)
-    saveHabits(next)
+  const valueFor = (habitId: string) => state.entries[selectedDate]?.[habitId]?.value ?? 0
+
+  const progress = useMemo(() => {
+    if (!state.habits.length) return 0
+    const total = state.habits.reduce((sum, habit) => {
+      const value = state.entries[selectedDate]?.[habit.id]?.value ?? 0
+      return sum + completion(habit, value)
+    }, 0)
+    return Math.round((total / state.habits.length) * 100)
+  }, [selectedDate, state])
+
+  const updateState = (updater: (current: TrackerState) => TrackerState) => {
+    setState((current) => {
+      const next = updater(current)
+      saveState(next)
+      return next
+    })
+  }
+
+  const setHabitValue = (habit: Habit, requestedValue: number) => {
+    const value = Math.max(0, Math.min(requestedValue, habit.target))
+    updateState((current) => {
+      const entries = { ...current.entries }
+      const dayEntries = { ...(entries[selectedDate] ?? {}) }
+
+      if (value === 0) {
+        delete dayEntries[habit.id]
+      } else {
+        dayEntries[habit.id] = {
+          habitId: habit.id,
+          date: selectedDate,
+          value,
+          updatedAt: new Date().toISOString(),
+        }
+      }
+
+      if (Object.keys(dayEntries).length === 0) delete entries[selectedDate]
+      else entries[selectedDate] = dayEntries
+
+      return { ...current, entries }
+    })
   }
 
   const advanceHabit = (habit: Habit) => {
+    const currentValue = valueFor(habit.id)
     const step = habit.type === 'duration' ? 5 : 1
-    const value = habit.type === 'binary' && habit.value >= 1 ? 0 : Math.min(habit.value + step, habit.target)
-    updateHabits(habits.map((item) => (item.id === habit.id ? { ...item, value } : item)))
+    const nextValue = habit.type === 'binary' && currentValue >= 1 ? 0 : currentValue + step
+    setHabitValue(habit, nextValue)
   }
 
   const decreaseHabit = (habit: Habit) => {
     const step = habit.type === 'duration' ? 5 : 1
-    updateHabits(habits.map((item) => (item.id === habit.id ? { ...item, value: Math.max(0, item.value - step) } : item)))
+    setHabitValue(habit, valueFor(habit.id) - step)
   }
 
   const addHabit = () => {
@@ -55,37 +84,48 @@ function App() {
         ? { target: 10, unit: 'раз' }
         : { target: 1, unit: '' }
 
-    updateHabits([...habits, {
+    const habit: Habit = {
       id: crypto.randomUUID(),
       title: cleanTitle,
       emoji: type === 'duration' ? '⏱️' : type === 'count' ? '🎯' : '✨',
       type,
-      value: 0,
       color: 'lime',
+      createdAt: new Date().toISOString(),
       ...defaults,
-    }])
+    }
+
+    updateState((current) => ({ ...current, habits: [...current.habits, habit] }))
     setTitle('')
     setType('binary')
     setIsAdding(false)
   }
 
+  const completedCount = state.habits.filter((habit) => completion(habit, valueFor(habit.id)) === 1).length
+
   return (
     <main className="app-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">Сегодня</p>
-          <h1>{new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</h1>
+          <div className="eyebrow-row">
+            <p className="eyebrow">{isToday ? 'Сегодня' : selectedDateObject.toLocaleDateString('ru-RU', { weekday: 'long' })}</p>
+            {!isToday && <button className="today-link" type="button" onClick={() => setSelectedDate(localDateKey())}>К сегодня</button>}
+          </div>
+          <h1>{selectedDateObject.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}</h1>
         </div>
         <div className="avatar" aria-hidden="true">К</div>
       </header>
 
-      <section className="week-strip" aria-label="Дни недели">
-        {weekDays.map((item) => (
-          <div className={item.isToday ? 'day active' : 'day'} key={item.key} aria-current={item.isToday ? 'date' : undefined}>
-            <span>{item.day}</span>
-            <strong>{item.date}</strong>
-          </div>
-        ))}
+      <section className="week-strip" aria-label="Выбор дня">
+        {weekDays.map((item) => {
+          const active = item.key === selectedDate
+          const className = `day${active ? ' active' : ''}${item.isToday && !active ? ' today' : ''}`
+          return (
+            <button className={className} key={item.key} type="button" onClick={() => setSelectedDate(item.key)} aria-current={active ? 'date' : undefined}>
+              <span>{item.day}</span>
+              <strong>{item.date}</strong>
+            </button>
+          )
+        })}
       </section>
 
       <section className="summary-card" aria-label={`Прогресс дня ${progress}%`}>
@@ -95,27 +135,28 @@ function App() {
         <div className="summary-copy">
           <p>Прогресс дня</p>
           <h2>{progress === 100 ? 'День закрыт!' : progress >= 50 ? 'Отличный темп' : 'Начнём с малого'}</h2>
-          <span>{habits.filter((habit) => completion(habit) === 1).length} из {habits.length} привычек выполнено</span>
+          <span>{completedCount} из {state.habits.length} привычек выполнено</span>
         </div>
       </section>
 
       <section className="habit-section">
         <div className="section-heading">
           <h2>Мои привычки</h2>
-          <span>{habits.length}</span>
+          <span>{state.habits.length}</span>
         </div>
         <div className="habit-list">
-          {habits.map((habit) => {
-            const done = completion(habit) === 1
+          {state.habits.map((habit) => {
+            const value = valueFor(habit.id)
+            const done = completion(habit, value) === 1
             return (
               <article className={`habit-card ${habit.color} ${done ? 'done' : ''}`} key={habit.id}>
                 <div className="habit-icon" aria-hidden="true">{habit.emoji}</div>
                 <button className="habit-main" type="button" onClick={() => advanceHabit(habit)}>
                   <span className="habit-title">{habit.title}</span>
                   <span className="habit-value">
-                    {habit.type === 'binary' ? (done ? 'Выполнено' : 'Отметить') : `${habit.value} / ${habit.target} ${habit.unit}`}
+                    {habit.type === 'binary' ? (done ? 'Выполнено' : 'Отметить') : `${value} / ${habit.target} ${habit.unit}`}
                   </span>
-                  <span className="habit-track"><i style={{ width: `${completion(habit) * 100}%` }} /></span>
+                  <span className="habit-track"><i style={{ width: `${completion(habit, value) * 100}%` }} /></span>
                 </button>
                 {habit.type === 'binary' ? (
                   <button className="check-button" type="button" onClick={() => advanceHabit(habit)} aria-label={done ? `Отменить выполнение: ${habit.title}` : `Выполнить: ${habit.title}`}>
