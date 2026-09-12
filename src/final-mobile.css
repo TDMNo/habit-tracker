@@ -1,0 +1,106 @@
+button,
+input {
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(183, 244, 92, .42);
+  outline-offset: 3px;
+}
+
+[data-theme="light"] button:focus-visible,
+[data-theme="light"] input:focus-visible {
+  outline-color: rgba(141, 204, 63, .4);
+}
+
+.sheet-backdrop {
+  min-height: 100dvh;
+  overscroll-behavior: contain;
+}
+
+.add-sheet {
+  max-height: min(92dvh, 760px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+body:has(.sheet-backdrop) {
+  overflow: hidden;
+}
+
+.day {
+  min-height: 56px;
+}
+
+.habit-main {
+  min-height: 54px;
+}
+
+.edit-button {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+}
+
+.check-button,
+.stepper button,
+.theme-toggle {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.today-link {
+  min-height: 32px;
+}
+
+.add-button,
+.save-button,
+.login-button {
+  min-height: 56px;
+}
+
+@media (max-width: 420px) {
+  .edit-button {
+    flex-basis: 44px;
+    width: 44px;
+  }
+
+  .habit-card {
+    gap: 8px;
+  }
+
+  .theme-toggle {
+    right: 70px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 350px) {
+  .app-shell {
+    padding-inline: 14px;
+  }
+
+  .summary-card {
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .progress-ring {
+    flex-basis: 76px;
+    width: 76px;
+    height: 76px;
+  }
+
+  .habit-card {
+    padding: 11px;
+  }
+
+  .habit-icon {
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+  }
+}
