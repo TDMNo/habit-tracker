@@ -1,0 +1,66 @@
+name: habit_tracker_preview
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: habit_tracker_preview_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PREVIEW_DB:?PREVIEW_DB is required}
+      POSTGRES_USER: ${PREVIEW_DB_USER:?PREVIEW_DB_USER is required}
+      POSTGRES_PASSWORD: ${PREVIEW_DB_PASSWORD:?PREVIEW_DB_PASSWORD is required}
+    volumes:
+      - habit_tracker_preview_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - habit_tracker_preview_internal
+
+  app:
+    image: habit-tracker-app:preview
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: habit_tracker_preview_app
+    restart: unless-stopped
+    init: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      APP_BIND_ADDRESS: 0.0.0.0
+      APP_PORT: 3000
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${PREVIEW_DB:?PREVIEW_DB is required}
+      PGUSER: ${PREVIEW_DB_USER:?PREVIEW_DB_USER is required}
+      PGPASSWORD: ${PREVIEW_DB_PASSWORD:?PREVIEW_DB_PASSWORD is required}
+      SESSION_SECRET: ${PREVIEW_SESSION_SECRET:?PREVIEW_SESSION_SECRET is required}
+      COOKIE_SECURE: "false"
+      TRUST_PROXY: "false"
+    ports:
+      - "${PREVIEW_BIND_IP:?PREVIEW_BIND_IP is required}:${PREVIEW_PORT:-3011}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - habit_tracker_preview_internal
+
+volumes:
+  habit_tracker_preview_pgdata:
+    name: habit_tracker_preview_pgdata
+
+networks:
+  habit_tracker_preview_internal:
+    name: habit_tracker_preview_internal
