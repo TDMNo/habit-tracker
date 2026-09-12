@@ -6,6 +6,7 @@ import { applyTheme, getInitialTheme } from './theme'
 import './styles.css'
 import './auth.css'
 import './theme.css'
+import './final-mobile.css'
 
 applyTheme(getInitialTheme(), false)
 
